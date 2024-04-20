@@ -1,0 +1,4 @@
+FastAPI
+gunicorn
+line-bot-sdk
+langchain
