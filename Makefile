@@ -20,9 +20,6 @@ deploy:
 	gcloud run deploy ${SERVICE_NAME} --region ${GOOGLE_REGION} --image ${DOCKER_URL} --update-env-vars LINE_CHANNEL_ACCESS_TOKEN=${LINE_CHANNEL_ACCESS_TOKEN},LINE_CHANNEL_SECRET=${LINE_CHANNEL_SECRET}
 
 deploy_public:
-	gcloud run services add-iam-policy-binding ${SERVICE_NAME} \
-    	--member="allUsers" \
-    	--role="roles/run.invoker"
 	gcloud run deploy ${SERVICE_NAME} \
 		--region ${GOOGLE_REGION} \
 		--image ${DOCKER_URL} \
