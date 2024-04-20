@@ -5,6 +5,7 @@ DOCKER_URL=${DOCKER_BASE_URL}/${GOOGLE_CLOUD_PROJECT}/line-sakamomo-family-api/a
 SERVICE_NAME=line-sakamomo-family-api
 LINE_CHANNEL_ACCESS_TOKEN=xxx
 LINE_CHANNEL_SECRET=xxx
+API_PORT=8080
 
 
 setup:
@@ -24,4 +25,8 @@ deploy_public:
 		--region ${GOOGLE_REGION} \
 		--image ${DOCKER_URL} \
 		--update-env-vars LINE_CHANNEL_ACCESS_TOKEN=${LINE_CHANNEL_ACCESS_TOKEN},LINE_CHANNEL_SECRET=${LINE_CHANNEL_SECRET} \
+		--port ${API_PORT} \
 		--allow-unauthenticated
+
+delete_run:
+	gcloud run services delete ${SERVICE_NAME} --region ${GOOGLE_REGION}

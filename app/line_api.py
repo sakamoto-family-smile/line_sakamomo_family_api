@@ -1,10 +1,16 @@
 import os
 from fastapi import FastAPI, Header, Request
 from linebot import LineBotApi, WebhookHandler
-from linebot.models import MessageEvent
+from linebot.models import MessageEvent, TextSendMessage
 from linebot.exceptions import InvalidSignatureError
 from starlette.exceptions import HTTPException
 from pydantic import BaseModel
+from logging import getLogger, StreamHandler
+
+
+logger = getLogger(__name__)
+logger.addHandler(StreamHandler())
+logger.setLevel("DEBUG")
 
 
 app = FastAPI(
@@ -50,7 +56,12 @@ def handle_message(event: MessageEvent):
         送信されたメッセージの情報です。
     """
 
+    # debug
+    logger.debug("start handle message...")
+    logger.debug(event.message)
+
+    res_text = TextSendMessage(text=f"レスポンスは実装中です. 送信されたメッセージは、{event.message.text}.")
     line_bot_api.reply_message(
         event.reply_token,
-        f"レスポンスは実装中です. 送信されたメッセージは、{event.message.text}."
+        res_text
     )
