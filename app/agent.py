@@ -48,8 +48,5 @@ class Agent:
         self.__logger = logger
 
     def get_weather_info(self, area_name: str) -> WeatherInfo:
-        try:
-            info = AgentUtil.get_weather_info(area_name=area_name)
-            return info
-        except Exception as e:
-            self.__logger.error(e)
+        info = AgentUtil.get_weather_info(area_name=area_name)
+        return info
