@@ -6,7 +6,7 @@ from linebot.exceptions import InvalidSignatureError
 from starlette.exceptions import HTTPException
 from pydantic import BaseModel
 from logging import getLogger, StreamHandler
-from agent import Agent
+from .agent import Agent
 
 
 logger = getLogger(__name__)
@@ -67,18 +67,16 @@ def handle_message(event: MessageEvent):
             # TODO : 都道府県をテキストから取得するようにする
             info = local_agent.get_weather_info(area_name="神奈川県")
             res_text = TextSendMessage(
-                text=f"""
-                地域名: {info.area_name}
-                気温: {info.temperature}
-                気圧: {info.pressure}
-                湿度: {info.humidity}%
-                天気: {info.weather_detail}
-                """
+                text=f"地域名: {info.area_name}\n" \
+                     f"気温: {info.temperature}\n" \
+                     f"気圧: {info.pressure}\n" \
+                     f"湿度: {info.humidity}%\n" \
+                     f"天気: {info.weather}"
             )
         except Exception as e:
             logger.error(e)
             res_text = TextSendMessage(
-                text=f"天気のレスポンスでエラーが発生しました."
+                text="天気のレスポンスでエラーが発生しました."
             )
     elif "todo" in text:
         res_text = TextSendMessage(

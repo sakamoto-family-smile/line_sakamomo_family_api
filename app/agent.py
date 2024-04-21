@@ -9,7 +9,7 @@ class WeatherInfo(BaseModel):
     temperature: float
     pressure: int
     humidity: int
-    weather_detail: str
+    weather: str
 
 
 class AgentUtil:
@@ -34,7 +34,7 @@ class AgentUtil:
                 temperature=data["main"]["temp"],
                 pressure=data["main"]["pressure"],
                 humidity=data["main"]["humidity"],
-                weather_detail=data["main"]["description"]
+                weather=data["weather"][0]["main"]
             )
         else:
             raise Exception(
