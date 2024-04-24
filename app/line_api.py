@@ -61,7 +61,21 @@ def handle_message(event: MessageEvent):
     logger.info(f"message event is {event.message}.")
     text = event.message.text
 
+    try:
+        res = local_agent.get_llm_agent_response(text=text)
+        res_text = TextSendMessage(text=res.text)
+    except Exception as e:
+        logger.error(e)
+        res_text = TextSendMessage(
+            text="LLMのレスポンスでエラーが発生しました."
+        )
+    line_bot_api.reply_message(
+        event.reply_token,
+        res_text
+    )
+
     # 特定の文字列を含む場合に、処理を分岐して、結果を返す
+"""
     if "天気" in text:
         try:
             # TODO : 都道府県をテキストから取得するようにする
@@ -89,7 +103,7 @@ def handle_message(event: MessageEvent):
     else:
         try:
             res = local_agent.get_llm_agent_response(text=text)
-            res_text = TextSendMessage(text=res)
+            res_text = TextSendMessage(text=res.text)
         except Exception as e:
             logger.error(e)
             res_text = TextSendMessage(
@@ -100,3 +114,4 @@ def handle_message(event: MessageEvent):
         event.reply_token,
         res_text
     )
+"""

@@ -4,3 +4,7 @@ line-bot-sdk
 langchain
 langchain-openai
 uvicorn
+pyowm
+langchain-google-genai
+pillow
+langchain_google_vertexai

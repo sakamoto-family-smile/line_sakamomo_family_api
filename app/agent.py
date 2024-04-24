@@ -5,6 +5,8 @@ from logging import Logger
 
 from langchain.agents import AgentType, initialize_agent, load_tools
 from langchain_openai import OpenAI
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_google_vertexai import VertexAI
 
 
 class WeatherInfo(BaseModel):
@@ -55,12 +57,20 @@ class CustomAgent:
         self.__logger = logger
 
         # OpenAI Agentの作成
-        llm = OpenAI(temperature=0)
+        #llm = OpenAI(temperature=0)
+        #llm = ChatGoogleGenerativeAI(model="gemini-1.5-pro-preview-0409", temperature=0.9) # gemini-pro
+        llm = VertexAI(
+            model_name="gemini-1.5-pro-preview-0409",
+            temperature=0.5,
+            max_output_tokens=400,
+            location=os.environ["GCP_LOCATION"],
+            project=os.environ["GCP_PROJECT"],
+        )
+        os.environ["OPENWEATHERMAP_API_KEY"] = os.environ["OPEN_WEATHER_KEY"]
         tools = load_tools(["openweathermap-api"], llm)
         self.__openai_agent = initialize_agent(
             tools=tools, llm=llm, agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION, verbose=True
         )
-
 
     def get_weather_info(self, area_name: str) -> WeatherInfo:
         info = AgentUtil.get_weather_info(area_name=area_name)
