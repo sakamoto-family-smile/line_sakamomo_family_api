@@ -12,6 +12,10 @@ class WeatherInfo(BaseModel):
     weather: str
 
 
+class LLMAgentResponse(BaseModel):
+    text: str
+
+
 class AgentUtil:
     @classmethod
     def get_weather_info(cls, area_name: str) -> WeatherInfo:
@@ -43,10 +47,13 @@ class AgentUtil:
         return info
 
 
-class Agent:
+class CustomAgent:
     def __init__(self, logger: Logger) -> None:
         self.__logger = logger
 
     def get_weather_info(self, area_name: str) -> WeatherInfo:
         info = AgentUtil.get_weather_info(area_name=area_name)
         return info
+
+    def get_llm_agent_response(self, text: str) -> LLMAgentResponse:
+        pass
