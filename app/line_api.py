@@ -87,9 +87,15 @@ def handle_message(event: MessageEvent):
             text=f"料理のレスポンスは実装中です. 送信されたメッセージは、{event.message.text} です."
         )
     else:
-        res_text = TextSendMessage(
-            text=f"レスポンスは実装中です. 送信されたメッセージは、{event.message.text} です."
-        )
+        try:
+            res = local_agent.get_llm_agent_response(text=text)
+            res_text = TextSendMessage(text=res)
+        except Exception as e:
+            logger.error(e)
+            res_text = TextSendMessage(
+                text="LLMのレスポンスでエラーが発生しました."
+            )
+
     line_bot_api.reply_message(
         event.reply_token,
         res_text

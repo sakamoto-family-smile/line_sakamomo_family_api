@@ -3,6 +3,9 @@ import os
 import requests
 from logging import Logger
 
+from langchain.agents import AgentType, initialize_agent, load_tools
+from langchain_openai import OpenAI
+
 
 class WeatherInfo(BaseModel):
     area_name: str
@@ -51,9 +54,18 @@ class CustomAgent:
     def __init__(self, logger: Logger) -> None:
         self.__logger = logger
 
+        # OpenAI Agentの作成
+        llm = OpenAI(temperature=0)
+        tools = load_tools(["openweathermap-api"], llm)
+        self.__openai_agent = initialize_agent(
+            tools=tools, llm=llm, agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION, verbose=True
+        )
+
+
     def get_weather_info(self, area_name: str) -> WeatherInfo:
         info = AgentUtil.get_weather_info(area_name=area_name)
         return info
 
     def get_llm_agent_response(self, text: str) -> LLMAgentResponse:
-        pass
+        res = self.__openai_agent.run(text)
+        return LLMAgentResponse(text=res)
