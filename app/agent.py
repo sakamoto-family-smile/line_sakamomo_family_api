@@ -78,7 +78,7 @@ class CustomAgent:
         os.environ["OPENWEATHERMAP_API_KEY"] = os.environ["OPEN_WEATHER_KEY"]
         tools = load_tools(["openweathermap-api"], llm)
         self.__agent = initialize_agent(
-            tools=tools, llm=llm, agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION, verbose=True
+            tools=tools, llm=llm, agent=AgentType.CHAT_CONVERSATIONAL_REACT_DESCRIPTION, verbose=True
         )
         memory = self.get_chat_message_history(
             memory_type="firestore",
@@ -86,12 +86,6 @@ class CustomAgent:
                 "session_id": "session_id", "collection": "HistoryMessages"
             }
         )
-
-        # debug
-        messages = memory.messages
-        for message in messages:
-            self.__logger.info(message)
-
         self.__agent_with_chat_history = RunnableWithMessageHistory(
             self.__agent,
             # This is needed because in most real world scenarios, a session id is needed
