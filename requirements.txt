@@ -8,3 +8,5 @@ pyowm
 langchain-google-genai
 pillow
 langchain_google_vertexai
+langchain-google-memorystore-redis
+langchain-google-firestore
