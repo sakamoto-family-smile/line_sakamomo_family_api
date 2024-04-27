@@ -6,7 +6,7 @@ from linebot.exceptions import InvalidSignatureError
 from starlette.exceptions import HTTPException
 from pydantic import BaseModel
 from logging import getLogger, StreamHandler
-from .agent import CustomAgent
+from .agent import CustomAgent, CustomAgentConfig
 
 
 logger = getLogger(__name__)
@@ -20,7 +20,11 @@ app = FastAPI(
 )
 line_bot_api = LineBotApi(os.environ["LINE_CHANNEL_ACCESS_TOKEN"])
 handler = WebhookHandler(os.environ["LINE_CHANNEL_SECRET"])
-local_agent = CustomAgent(logger=logger)
+agent_config = CustomAgentConfig(
+    dialogue_session_id="sakamomo_family_dialogue_session",
+    memory_store_type="firestore"
+)
+local_agent = CustomAgent(agent_config=agent_config, logger=logger)
 
 
 class Response(BaseModel):
