@@ -2,7 +2,8 @@ from pydantic import BaseModel
 import os
 import requests
 from logging import Logger, getLogger, StreamHandler
-from typing import List
+from typing import List, Type, Optional
+from datetime import datetime
 
 from langchain.agents import AgentType, initialize_agent, load_tools
 from langchain_google_vertexai import VertexAI
@@ -11,6 +12,12 @@ from langchain.memory import ConversationBufferMemory
 from langchain_google_firestore import FirestoreChatMessageHistory
 from langchain_core.chat_history import BaseChatMessageHistory
 from langchain.tools.base import BaseTool
+from langchain.callbacks.manager import (
+    AsyncCallbackManagerForToolRun,
+    CallbackManagerForToolRun,
+)
+
+from .firebase_util import get_db_client_with_default_credentials
 
 
 local_logger = getLogger(__name__)
@@ -134,3 +141,32 @@ class CustomAgent:
 
     def get_tools(self, llm) -> List[BaseTool]:
         return load_tools(["openweathermap-api"], llm)
+
+
+class TodoRegisterInput(BaseModel):
+    target_date: datetime
+    content: str
+
+
+class TodoRegisterTool(BaseTool):
+    name = "todo_register"
+    description = "useful for when you need to answer questions about current events"
+    args_schema: Type[BaseModel] = TodoRegisterInput
+
+    def __init__(self, /, **data: os.Any) -> None:
+        super().__init__(**data)
+        self.__db = get_db_client_with_default_credentials()
+        self.__collection_id = ""
+        self.__document_id = ""
+
+    def _run(
+        self, target_date: datetime, content: str, run_manager: Optional[CallbackManagerForToolRun] = None
+    ) -> str:
+        """Use the tool."""
+        return "LangChain"
+
+    async def _arun(
+        self, target_date: datetime, content: str, run_manager: Optional[AsyncCallbackManagerForToolRun] = None
+    ) -> str:
+        """Use the tool asynchronously."""
+        raise NotImplementedError("custom_search does not support async")
