@@ -21,7 +21,7 @@ app = FastAPI(
 line_bot_api = LineBotApi(os.environ["LINE_CHANNEL_ACCESS_TOKEN"])
 handler = WebhookHandler(os.environ["LINE_CHANNEL_SECRET"])
 agent_config = CustomAgentConfig(
-    dialogue_session_id="sakamomo_family_dialogue_session",
+    dialogue_session_id="sakamomo_family_session",
     memory_store_type="firestore"
 )
 local_agent = CustomAgent(agent_config=agent_config, logger=logger)

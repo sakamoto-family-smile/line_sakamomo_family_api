@@ -140,7 +140,12 @@ class CustomAgent:
             raise NotImplementedError(f"{memory_type} memory type is not implemented!")
 
     def get_tools(self, llm) -> List[BaseTool]:
-        return load_tools(["openweathermap-api"], llm)
+        tools = load_tools(["openweathermap-api"], llm)
+        tools.append(TodoRegisterTool(
+            document_id=self.__agent_config.dialogue_session_id,
+            logger=self.__logger
+        ))
+        return tools
 
 
 class TodoRegisterInput(BaseModel):
@@ -150,19 +155,28 @@ class TodoRegisterInput(BaseModel):
 
 class TodoRegisterTool(BaseTool):
     name = "todo_register"
-    description = "useful for when you need to answer questions about current events"
+    description = "useful for when you need to register the task or todo."
     args_schema: Type[BaseModel] = TodoRegisterInput
 
     def __init__(self, /, **data: os.Any) -> None:
         super().__init__(**data)
         self.__db = get_db_client_with_default_credentials()
-        self.__collection_id = ""
-        self.__document_id = ""
+        self.__collection_id = "ToDoHistory"
+        self.__document_id = data["document_id"]
+        self.__logger = data["logger"] if "logger" in data else local_logger
 
     def _run(
         self, target_date: datetime, content: str, run_manager: Optional[CallbackManagerForToolRun] = None
     ) -> str:
-        """Use the tool."""
+        self.__logger.info(f"start to register the todo. date is {target_date}, todo content is {content}")
+        try:
+            data = {
+                "date": target_date, "todo": content
+            }
+            self.__db.collection(self.__collection_id).document(self.__document_id).set(data)
+        except Exception as e:
+            self.__logger.error(e)
+            return "error is occured!"
         return "LangChain"
 
     async def _arun(
