@@ -10,3 +10,4 @@ pillow
 langchain_google_vertexai
 langchain-google-memorystore-redis
 langchain-google-firestore
+firebase_admin

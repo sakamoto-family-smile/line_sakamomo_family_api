@@ -17,6 +17,7 @@ from langchain.callbacks.manager import (
     CallbackManagerForToolRun,
 )
 
+import google.cloud.firestore
 from .firebase_util import get_db_client_with_default_credentials
 
 
@@ -153,29 +154,34 @@ class TodoRegisterInput(BaseModel):
     content: str
 
 
+# TODO : 動かないので修正が必要
 class TodoRegisterTool(BaseTool):
     name = "todo_register"
     description = "useful for when you need to register the task or todo."
     args_schema: Type[BaseModel] = TodoRegisterInput
+    db: google.cloud.firestore.Client = None
+    collection_id: str = "ToDoHistory"
+    document_id: str = None
+    logger = local_logger
 
-    def __init__(self, /, **data: os.Any) -> None:
+    def __init__(self, /, **data) -> None:
         super().__init__(**data)
-        self.__db = get_db_client_with_default_credentials()
-        self.__collection_id = "ToDoHistory"
-        self.__document_id = data["document_id"]
-        self.__logger = data["logger"] if "logger" in data else local_logger
+        self.db = get_db_client_with_default_credentials()
+        self.collection_id = "ToDoHistory"
+        self.document_id = data["document_id"]
+        self.logger = data["logger"] if "logger" in data else local_logger
 
     def _run(
         self, target_date: datetime, content: str, run_manager: Optional[CallbackManagerForToolRun] = None
     ) -> str:
-        self.__logger.info(f"start to register the todo. date is {target_date}, todo content is {content}")
+        self.logger.info(f"start to register the todo. date is {target_date}, todo content is {content}")
         try:
             data = {
                 "date": target_date, "todo": content
             }
-            self.__db.collection(self.__collection_id).document(self.__document_id).set(data)
+            self.db.collection(self.collection_id).document(self.document_id).set(data)
         except Exception as e:
-            self.__logger.error(e)
+            self.logger.error(e)
             return "error is occured!"
         return "LangChain"
 
