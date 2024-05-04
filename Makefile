@@ -36,3 +36,6 @@ lint:
 
 format:
 	pysen run format
+
+debug_line_request:
+	curl -X POST https://line-sakamomo-family-api-m544onxfdq-an.a.run.app/line_callback -H "x-line-signature:hoge" --data "data=hoge"
