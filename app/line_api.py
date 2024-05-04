@@ -1,14 +1,15 @@
 import os
+from logging import StreamHandler, getLogger
+
 from fastapi import FastAPI, Header, Request
 from linebot import LineBotApi, WebhookHandler
-from linebot.models import MessageEvent, TextSendMessage
 from linebot.exceptions import InvalidSignatureError
-from starlette.exceptions import HTTPException
+from linebot.models import MessageEvent, TextSendMessage
 from pydantic import BaseModel
-from logging import getLogger, StreamHandler
+from starlette.exceptions import HTTPException
+
 from .agent import CustomAgent, CustomAgentConfig
 from .todo_util import TodoHandler
-
 
 logger = getLogger(__name__)
 logger.addHandler(StreamHandler())
@@ -16,18 +17,18 @@ logger.setLevel("DEBUG")
 
 
 app = FastAPI(
-    title="line_sakamomo_family_api",
-    description="The API is sakamomo family bot."
+    title="line_sakamomo_family_api", description="The API is sakamomo family bot."
 )
 line_bot_api = LineBotApi(os.environ["LINE_CHANNEL_ACCESS_TOKEN"])
 handler = WebhookHandler(os.environ["LINE_CHANNEL_SECRET"])
 session_id = "sakamomo_family_session"
 agent_config = CustomAgentConfig(
-    dialogue_session_id=session_id,
-    memory_store_type="firestore"
+    dialogue_session_id=session_id, memory_store_type="firestore"
 )
 local_agent = CustomAgent(agent_config=agent_config, logger=logger)
-todo_handler = TodoHandler(collection_id="ToDoHistory", document_id=session_id, custom_logger=logger)
+todo_handler = TodoHandler(
+    collection_id="ToDoHistory", document_id=session_id, custom_logger=logger
+)
 
 
 class Response(BaseModel):
@@ -83,12 +84,11 @@ def handle_message(event: MessageEvent):
             logger.error(e)
             res = "LLMのレスポンスでエラーが発生しました."
     res_text = TextSendMessage(text=res)
-    line_bot_api.reply_message(
-        event.reply_token,
-        res_text
-    )
+    line_bot_api.reply_message(event.reply_token, res_text)
 
     # 特定の文字列を含む場合に、処理を分岐して、結果を返す
+
+
 """
     if "天気" in text:
         try:

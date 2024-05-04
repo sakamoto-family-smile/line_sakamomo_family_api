@@ -1,8 +1,8 @@
-import firebase_admin
-from firebase_admin import credentials
-from firebase_admin import firestore
-import google.cloud.firestore
 from datetime import datetime
+
+import firebase_admin
+import google.cloud.firestore
+from firebase_admin import credentials, firestore
 
 
 def get_db_client_with_default_credentials() -> google.cloud.firestore.Client:
@@ -17,9 +17,7 @@ def register_todo(
     collection_id: str,
     document_id: str,
     target_date: datetime,
-    todo_text: str
+    todo_text: str,
 ):
-    data = {
-        "date": target_date, "todo": todo_text
-    }
+    data = {"date": target_date, "todo": todo_text}
     db.collection(collection_id).document(document_id).set(data, merge=True)
