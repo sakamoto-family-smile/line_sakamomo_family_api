@@ -142,10 +142,10 @@ class CustomAgent:
 
     def get_tools(self, llm) -> List[BaseTool]:
         tools = load_tools(["openweathermap-api"], llm)
-        tools.append(TodoRegisterTool(
-            document_id=self.__agent_config.dialogue_session_id,
-            logger=self.__logger
-        ))
+        #tools.append(TodoRegisterTool(
+        #    document_id=self.__agent_config.dialogue_session_id,
+        #    logger=self.__logger
+        #))
         return tools
 
 
