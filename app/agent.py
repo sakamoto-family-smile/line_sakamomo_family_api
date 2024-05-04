@@ -123,7 +123,7 @@ class CustomAgent:
             raise NotImplementedError(f"{memory_type} memory type is not implemented!")
 
     def get_tools(self, llm) -> List[BaseTool]:
-        tools = load_tools(["openweathermap-api"], llm)
+        tools = load_tools(["openweathermap-api", "google-search"], llm)
         # tools.append(TodoRegisterTool(
         #    document_id=self.__agent_config.dialogue_session_id,
         #    logger=self.__logger
