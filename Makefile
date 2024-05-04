@@ -30,3 +30,9 @@ deploy_public:
 
 delete_run:
 	gcloud run services delete ${SERVICE_NAME} --region ${GOOGLE_REGION}
+
+lint:
+	pysen run lint
+
+format:
+	pysen run format
