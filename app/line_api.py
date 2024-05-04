@@ -22,7 +22,7 @@ handler = WebhookHandler(os.environ["LINE_CHANNEL_SECRET"])
 session_id = "sakamomo_family_session"
 agent_config = CustomAgentConfig(dialogue_session_id=session_id, memory_store_type="firestore")
 local_agent = CustomAgent(agent_config=agent_config, logger=logger)
-todo_handler = TodoHandler(collection_id="ToDoHistory", document_id=session_id, custom_logger=logger)
+todo_handler = TodoHandler(family_id=session_id, collection_id="ToDoHistory", custom_logger=logger)
 
 
 class Response(BaseModel):
