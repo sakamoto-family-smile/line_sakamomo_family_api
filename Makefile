@@ -3,15 +3,9 @@ GOOGLE_REGION=asia-northeast1
 DOCKER_BASE_URL=${GOOGLE_REGION}-docker.pkg.dev
 DOCKER_URL=${DOCKER_BASE_URL}/${GOOGLE_CLOUD_PROJECT}/line-sakamomo-family-api/api
 SERVICE_NAME=line-sakamomo-family-api
-LINE_CHANNEL_ACCESS_TOKEN=xxx
-LINE_CHANNEL_SECRET=xxx
-OPEN_WEATHER_KEY=xxx
-OPEN_AI_API_KEY=xxx
-GOOGLE_API_KEY=xxx
 API_PORT=8080
 LANGCHAIN_ENDPOINT=https://api.smith.langchain.com
-LANGCHAIN_API_KEY=xxx
-
+include .env
 
 setup:
 	gcloud auth configure-docker ${DOCKER_BASE_URL}
@@ -36,3 +30,9 @@ deploy_public:
 
 delete_run:
 	gcloud run services delete ${SERVICE_NAME} --region ${GOOGLE_REGION}
+
+lint:
+	pysen run lint
+
+format:
+	pysen run format
