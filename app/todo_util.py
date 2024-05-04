@@ -17,9 +17,7 @@ class TodoData(BaseModel):
 
 
 class TodoHandler:
-    def __init__(
-        self, collection_id: str, document_id: str, custom_logger: Logger = None
-    ) -> None:
+    def __init__(self, collection_id: str, document_id: str, custom_logger: Logger = None) -> None:
         self.collection_id = collection_id
         self.document_id = document_id
         self.logger = custom_logger if custom_logger is not None else local_logger
@@ -32,9 +30,7 @@ class TodoHandler:
             raise TodoHandleError(f"input text format is invalid! text is {input_text}")
 
         if datas[0] != "TODO":
-            raise TodoHandleError(
-                f"input text format is invalid! head text data is not 'TODO'. text is {input_text}"
-            )
+            raise TodoHandleError(f"input text format is invalid! head text data is not 'TODO'. text is {input_text}")
 
         # TODOに関する処理を実施
         if len(datas) == 2:
@@ -57,9 +53,7 @@ class TodoHandler:
         Raises:
             TodoRegisterationError: _description_
         """
-        self.logger.info(
-            f"start to register the todo. target_date is {target_date}, content is {content}"
-        )
+        self.logger.info(f"start to register the todo. target_date is {target_date}, content is {content}")
 
         # 日付情報とTODO情報をデータベースに登録
         data = {"date": target_date, "content": content}
@@ -67,9 +61,7 @@ class TodoHandler:
             self.db.collection(self.collection_id).document(self.document_id).set(data)
         except Exception as e:
             self.logger.error(e)
-            raise TodoRegisterationError(
-                f"inserting data into db is error! error detail is {e}"
-            )
+            raise TodoRegisterationError(f"inserting data into db is error! error detail is {e}")
 
     def get_todo_list_from_text(self, target_date: datetime) -> List[TodoData]:
         self.logger.info(f"start to get the todo list. target_date is {target_date}")
@@ -77,11 +69,7 @@ class TodoHandler:
         # 日付情報から、TODO一覧を取得
         # TODO : 取得する際に日付でフィルタをするようにしたい。そして、かなり遅い取り方になっている
         try:
-            documents = (
-                self.db.collection(self.collection_id)
-                .document(self.document_id)
-                .collections()
-            )
+            documents = self.db.collection(self.collection_id).document(self.document_id).collections()
             res = []
             for document in documents:
                 d = document.to_dict()
@@ -89,9 +77,7 @@ class TodoHandler:
             return res
         except Exception as e:
             self.logger.error(e)
-            raise TodoRegisterationError(
-                f"getting data from db is error! error detail is {e}"
-            )
+            raise TodoRegisterationError(f"getting data from db is error! error detail is {e}")
 
 
 class TodoHandleError(Exception):

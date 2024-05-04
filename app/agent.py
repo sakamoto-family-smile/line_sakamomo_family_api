@@ -6,10 +6,7 @@ from typing import List, Optional, Type
 import google.cloud.firestore
 import requests
 from langchain.agents import AgentType, initialize_agent, load_tools
-from langchain.callbacks.manager import (
-    AsyncCallbackManagerForToolRun,
-    CallbackManagerForToolRun,
-)
+from langchain.callbacks.manager import AsyncCallbackManagerForToolRun, CallbackManagerForToolRun
 from langchain.memory import ConversationBufferMemory
 from langchain.tools.base import BaseTool
 from langchain_core.chat_history import BaseChatMessageHistory
@@ -63,9 +60,7 @@ class AgentUtil:
                 weather=data["weather"][0]["main"],
             )
         else:
-            raise Exception(
-                f"getting weather information is failed. http status code is {response.status_code}."
-            )
+            raise Exception(f"getting weather information is failed. http status code is {response.status_code}.")
         return info
 
 
@@ -114,22 +109,16 @@ class CustomAgent:
         self.__logger.info("start get_llm_agent_response...")
         res = self.__agent_with_chat_history.invoke(
             {"input": text},
-            config={
-                "configurable": {"session_id": self.__agent_config.dialogue_session_id}
-            },
+            config={"configurable": {"session_id": self.__agent_config.dialogue_session_id}},
         )
         return LLMAgentResponse(text=res["output"])
 
-    def get_chat_message_history(
-        self, memory_type: str, config: dict
-    ) -> BaseChatMessageHistory:
+    def get_chat_message_history(self, memory_type: str, config: dict) -> BaseChatMessageHistory:
         if memory_type == "local":
             chat_buffer = ConversationBufferMemory()
             return chat_buffer.chat_memory
         elif memory_type == "firestore":
-            return FirestoreChatMessageHistory(
-                session_id=config["session_id"], collection=config["collection"]
-            )
+            return FirestoreChatMessageHistory(session_id=config["session_id"], collection=config["collection"])
         else:
             raise NotImplementedError(f"{memory_type} memory type is not implemented!")
 
@@ -170,9 +159,7 @@ class TodoRegisterTool(BaseTool):
         content: str,
         run_manager: Optional[CallbackManagerForToolRun] = None,
     ) -> str:
-        self.logger.info(
-            f"start to register the todo. date is {target_date}, todo content is {content}"
-        )
+        self.logger.info(f"start to register the todo. date is {target_date}, todo content is {content}")
         try:
             data = {"date": target_date, "todo": content}
             self.db.collection(self.collection_id).document(self.document_id).set(data)

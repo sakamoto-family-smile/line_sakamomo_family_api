@@ -16,19 +16,13 @@ logger.addHandler(StreamHandler())
 logger.setLevel("DEBUG")
 
 
-app = FastAPI(
-    title="line_sakamomo_family_api", description="The API is sakamomo family bot."
-)
+app = FastAPI(title="line_sakamomo_family_api", description="The API is sakamomo family bot.")
 line_bot_api = LineBotApi(os.environ["LINE_CHANNEL_ACCESS_TOKEN"])
 handler = WebhookHandler(os.environ["LINE_CHANNEL_SECRET"])
 session_id = "sakamomo_family_session"
-agent_config = CustomAgentConfig(
-    dialogue_session_id=session_id, memory_store_type="firestore"
-)
+agent_config = CustomAgentConfig(dialogue_session_id=session_id, memory_store_type="firestore")
 local_agent = CustomAgent(agent_config=agent_config, logger=logger)
-todo_handler = TodoHandler(
-    collection_id="ToDoHistory", document_id=session_id, custom_logger=logger
-)
+todo_handler = TodoHandler(collection_id="ToDoHistory", document_id=session_id, custom_logger=logger)
 
 
 class Response(BaseModel):
