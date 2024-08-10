@@ -1,7 +1,6 @@
-import os
 from logging import StreamHandler, getLogger
 
-from fastapi import FastAPI, Header
+from fastapi import FastAPI
 from pydantic import BaseModel
 from starlette.exceptions import HTTPException
 
