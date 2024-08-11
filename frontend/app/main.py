@@ -12,17 +12,25 @@ def load_firebase_auth():
     return app.auth()
 
 
-def app():
+def authenticate(auth, email: str, password: str):
+    try:
+        user = auth.sign_in_with_email_and_password(email, password)
+        print(user)
+    except Exception as e:
+        print(e)
+
+
+def app(auth):
     st.title("サンプルアプリ")
     st.text("email: ")
-    st.text_input("email", "")
+    email = st.text_input("email", "")
     st.text("password: ")
-    st.text_input("password", type="password")
+    password = st.text_input("password", type="password")
 
     if st.button("login"):
-        st.write("hoge")
+        authenticate(auth=auth, email=email, password=password)
 
 
 def main():
-    load_firebase_auth()
-    app()
+    auth = load_firebase_auth()
+    app(auth=auth)
