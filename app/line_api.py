@@ -8,8 +8,7 @@ from linebot.models import MessageEvent, TextSendMessage
 from pydantic import BaseModel
 from starlette.exceptions import HTTPException
 
-from .agent import CustomAgent, CustomAgentConfig
-from .todo_util import TodoHandler
+from .controller import Controller
 
 logger = getLogger(__name__)
 logger.addHandler(StreamHandler())
@@ -20,9 +19,7 @@ app = FastAPI(title="line_sakamomo_family_api", description="The API is sakamomo
 line_bot_api = LineBotApi(os.environ["LINE_CHANNEL_ACCESS_TOKEN"])
 handler = WebhookHandler(os.environ["LINE_CHANNEL_SECRET"])
 session_id = "sakamomo_family_session"
-agent_config = CustomAgentConfig(dialogue_session_id=session_id, memory_store_type="firestore")
-local_agent = CustomAgent(agent_config=agent_config, logger=logger)
-todo_handler = TodoHandler(family_id=session_id, collection_id="ToDoHistory", custom_logger=logger)
+controller = Controller(dialogue_session_id=session_id)
 
 
 class Response(BaseModel):
@@ -63,19 +60,7 @@ def handle_message(event: MessageEvent):
     logger.info(f"message event is {event.message}.")
     text = event.message.text
 
-    # TODOの登録、取得処理を行う
-    if text.startswith("TODO"):
-        try:
-            res = todo_handler.handle(input_text=text)
-        except Exception as e:
-            logger.error(e)
-            res = "TODOの設定処理でエラーが発生しました."
-    # LLMでの解析処理を実施
-    else:
-        try:
-            res = local_agent.get_llm_agent_response(text=text).text
-        except Exception as e:
-            logger.error(e)
-            res = "LLMのレスポンスでエラーが発生しました."
+    # メッセージに対する処理を実施
+    res = controller.handle_message(message=text)
     res_text = TextSendMessage(text=res)
     line_bot_api.reply_message(event.reply_token, res_text)
