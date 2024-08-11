@@ -5,6 +5,7 @@ import os
 import json
 
 
+# Identity Platform Func
 def load_firebase_auth():
     with open(os.path.join(os.path.dirname(__file__), "secret", "config.json")) as f:
         firebase_config = json.load(f)
@@ -20,6 +21,21 @@ def authenticate(auth, email: str, password: str):
         print(e)
 
 
+# Identity Aware Proxy Func
+def get_client_id_for_iap():
+    with open(os.path.join(os.path.dirname(__file__), "secret", "iap_config.json")) as f:
+        iap_config = json.load(f)
+    return iap_config["CLIENT_ID"]
+
+
+def request_for_iap(url, client_id, **kwargs):
+    if 'timeout' not in kwargs:
+        kwargs['timeout'] = 90
+
+    open_id_connect_token = id_token.fetch_id_token(Request(), client_id)
+
+
+# Main Codes
 def app(auth):
     st.title("サンプルアプリ")
     st.text("email: ")
