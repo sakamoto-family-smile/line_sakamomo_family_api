@@ -22,7 +22,8 @@ deploy_run:
 	gcloud run deploy ${SERVICE_NAME} \
 		--region ${GOOGLE_REGION} \
 		--image ${DOCKER_URL} \
-		--port ${API_PORT}
+		--port ${WEB_PORT} \
+		--allow-unauthenticated
 
 delete_run:
 	gcloud run services delete ${SERVICE_NAME} --region ${GOOGLE_REGION}
