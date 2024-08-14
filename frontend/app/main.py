@@ -63,13 +63,7 @@ def request_for_backend(url: str, token: str):
     resp = requests.request(
         "GET", url,
         headers={'Authorization': 'Bearer {}'.format(token)})
-    if resp.status_code == 403:
-        raise Exception(
-            'Bad response from application: {!r} / {!r} / {!r}'.format(
-                resp.status_code, resp.headers, resp.text))
-        #raise Exception('Service account does not have permission to '
-        #                'access the IAP-protected application.')
-    elif resp.status_code != 200:
+    if resp.status_code != 200:
         raise Exception(
             'Bad response from application: {!r} / {!r} / {!r}'.format(
                 resp.status_code, resp.headers, resp.text))
@@ -92,26 +86,13 @@ def main():
 
         if st.spinner("please wait for authenticate.."):
             user = authenticate(auth=auth, email=email, password=password)
-
-        # debug
-        st.json(user)
-        id_token = user["idToken"]
-        st.write(f"user token is {id_token}")
         st.success("authenticate is completed!")
-
-        if st.spinner("please wait for iap connection.."):
-            client_id = get_client_id_for_iap()
-        st.write(f"client_id is {client_id}")
-        st.success("getting client id is completed!")
 
         if st.spinner("please wait for request backend.."):
             backend_url = get_backend_url()
             health_url = f"{backend_url}/health"
-            # res = request_for_iap(url=health_url, client_id=client_id)
             res = request_for_backend(url=health_url, token=user["idToken"])
 
-        # debug
-        st.success(res)
 
 
 if __name__ == "__main__":
