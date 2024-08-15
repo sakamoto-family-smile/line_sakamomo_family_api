@@ -7,4 +7,4 @@ COPY app ./app
 
 EXPOSE 8501
 
-ENTRYPOINT [ "streamlit", "run", "app/main.py" ]
+ENTRYPOINT [ "streamlit", "run", "app/ui.py" ]
