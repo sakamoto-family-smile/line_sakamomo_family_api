@@ -25,7 +25,7 @@ deploy_api:
 		--update-env-vars GOOGLE_API_KEY=${GOOGLE_API_KEY},GOOGLE_CSE_ID=${GOOGLE_CSE_ID} \
 		--port ${API_PORT}
 
-deploy_line_api:
+deploy_public_api:
 	gcloud run deploy ${SERVICE_NAME} \
 		--region ${GOOGLE_REGION} \
 		--image ${DOCKER_URL} \

@@ -23,11 +23,14 @@ class BackendRequester:
 
     def request_bot(self, token: str, text: str) -> dict:
         url = f"{self.__backend_url}/bot"
+        data = {"message": text}
         resp = requests.request(
             "POST", url,
-            data={"message": text},
-            headers={'Authorization': 'Bearer {}'.format(token)}
-
+            data=json.dumps(data),
+            headers={
+                "Content-Type": "application/json",
+                'Authorization': 'Bearer {}'.format(token)
+            }
         )
         if resp.status_code != 200:
             raise Exception(

@@ -83,7 +83,7 @@ def chat_widget():
         # バックエンドのAPIにリクエストを投げて、待機
         with st.spinner("please wait for AI response.."):
             backend_requester = BackendRequester()
-            res = backend_requester.request_bot(token=st.session_state[TOKEN_KEY], text=user_message)
+            res = backend_requester.request_bot(token=st.session_state[TOKEN_KEY], text=str(user_message))
 
         # APIの結果を画面と履歴に出力
         ai_message = res["message"]
