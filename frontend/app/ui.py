@@ -66,6 +66,7 @@ def chat_widget():
     if CHAT_HISTORY not in st.session_state:
         st.session_state[CHAT_HISTORY] = []
 
+    # チャット一覧と入力ボックスの位置調整のために、container上にチャット一覧を表示する
     chat_container = st.container()
 
     # チャット履歴を全て表示する
