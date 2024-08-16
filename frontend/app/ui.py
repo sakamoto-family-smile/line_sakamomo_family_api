@@ -46,16 +46,30 @@ def login_page(placeholder):
         st.rerun()
 
 
+@st.dialog("Token Expired!")
+def expired_token_dialogue():
+    st.write("token is expired! please relogin!")
+    if st.button("OK"):
+        del st.session_state[TOKEN_KEY]
+        st.rerun()
+
+
 def chat_page(placeholder):
     backend_requester = BackendRequester()
 
-    # 一旦ダミーとして作成
+    # チャット画面の構築
     with placeholder.container():
         st.title("Chat Bot")
 
         # apiが使えるかをチェックしておく
         with st.spinner("please wait for health check.."):
-            backend_requester.request_health_check(token=st.session_state[TOKEN_KEY])
+            try:
+                backend_requester.request_health_check(token=st.session_state[TOKEN_KEY])
+            except Exception as e:
+                print(e)
+
+                # tokenの更新が必要と判断し、token情報を削除して、画面をリロードする
+                expired_token_dialogue()
 
         # チャット画面を作成する
         chat_widget()
