@@ -66,15 +66,17 @@ def chat_widget():
     if CHAT_HISTORY not in st.session_state:
         st.session_state[CHAT_HISTORY] = []
 
+    chat_container = st.container()
+
     # チャット履歴を全て表示する
     for message in st.session_state[CHAT_HISTORY]:
-        with st.chat_message(message.role):
+        with chat_container.chat_message(message.role):
             st.markdown(message.content)
 
     # ユーザーのメッセージ入力処理
     if user_message := st.chat_input("メッセージを入力してね"):
         # ユーザーの入力結果を画面に追加
-        with st.chat_message("user"):
+        with chat_container.chat_message("user"):
             st.markdown(user_message)
 
         # ユーザの入力をチャット履歴に追加する
@@ -87,7 +89,7 @@ def chat_widget():
 
         # APIの結果を画面と履歴に出力
         ai_message = res["message"]
-        with st.chat_message("ai"):
+        with chat_container.chat_message("ai"):
             st.markdown(ai_message)
         st.session_state[CHAT_HISTORY].append(ChatMessage(role="ai", content=ai_message))
 
