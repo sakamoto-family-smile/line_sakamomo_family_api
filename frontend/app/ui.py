@@ -1,10 +1,19 @@
 import streamlit as st
+from dataclasses import dataclass
+
 from login import LoginHelper
 from backend_util import BackendRequester
 
 
 # グローバル変数
 TOKEN_KEY = "authenticated"
+CHAT_HISTORY = "CHAT_MESSAGES"
+
+
+@dataclass
+class ChatMessage:
+    role: str
+    content: str
 
 
 def check_auth_key() -> bool:
@@ -14,6 +23,7 @@ def check_auth_key() -> bool:
 def login_page(placeholder):
     # ログインページ用のUIを作成
     with placeholder.container():
+        st.title("Login Page")
         st.text("email: ")
         email = st.text_input("email", "")
         st.text("password: ")
@@ -41,10 +51,45 @@ def chat_page(placeholder):
 
     # 一旦ダミーとして作成
     with placeholder.container():
-        st.text("Main Page")
+        st.title("Chat Bot")
+
+        # apiが使えるかをチェックしておく
         with st.spinner("please wait for health check.."):
             backend_requester.request_health_check(token=st.session_state[TOKEN_KEY])
-        st.success("health check is completed!")
+
+        # チャット画面を作成する
+        chat_widget()
+
+
+def chat_widget():
+    # チャット履歴の情報がなければ、初期化する
+    if CHAT_HISTORY not in st.session_state:
+        st.session_state[CHAT_HISTORY] = []
+
+    # チャット履歴を全て表示する
+    for message in st.session_state[CHAT_HISTORY]:
+        with st.chat_message(message.role):
+            st.markdown(message.content)
+
+    # ユーザーのメッセージ入力処理
+    if user_message := st.chat_input("メッセージを入力してね"):
+        # ユーザーの入力結果を画面に追加
+        with st.chat_message("user"):
+            st.markdown(user_message)
+
+        # ユーザの入力をチャット履歴に追加する
+        st.session_state[CHAT_HISTORY].append(ChatMessage(role="user", content=user_message))
+
+        # バックエンドのAPIにリクエストを投げて、待機
+        with st.spinner("please wait for AI response.."):
+            backend_requester = BackendRequester()
+            res = backend_requester.request_bot(token=st.session_state[TOKEN_KEY], text=user_message)
+
+        # APIの結果を画面と履歴に出力
+        ai_message = res["message"]
+        with st.chat_message("ai"):
+            st.markdown(ai_message)
+        st.session_state[CHAT_HISTORY].append(ChatMessage(role="ai", content=ai_message))
 
 
 def main():

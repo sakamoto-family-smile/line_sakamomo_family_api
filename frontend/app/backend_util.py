@@ -22,5 +22,9 @@ class BackendRequester:
             return resp.json()
 
     def request_bot(self, token: str, text: str) -> dict:
-        # TODO : imp
-        return {}
+        url = f"{self.__backend_url}/bot"
+        resp = requests.request(
+            "POST", url,
+            data={"message": text},
+            headers={'Authorization': 'Bearer {}'.format(token)}
+        )
