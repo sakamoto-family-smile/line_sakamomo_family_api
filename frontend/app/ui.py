@@ -1,10 +1,14 @@
 import streamlit as st
-from .login import LoginHelper
-from .backend_util import BackendRequester
+from login import LoginHelper
+from backend_util import BackendRequester
 
 
 # グローバル変数
 TOKEN_KEY = "authenticated"
+
+
+def check_auth_key() -> bool:
+    return TOKEN_KEY in st.session_state and st.session_state[TOKEN_KEY]
 
 
 def login_page(placeholder):
@@ -28,8 +32,8 @@ def login_page(placeholder):
         st.success("login is completed!")
 
     # トークンが取れていれば、ページをメインのページへ遷移する
-    if st.session_state[TOKEN_KEY]:
-        chat_page(placeholder=placeholder)
+    if check_auth_key():
+        st.rerun()
 
 
 def chat_page(placeholder):
@@ -43,7 +47,6 @@ def chat_page(placeholder):
         st.success("health check is completed!")
 
 
-
 def main():
     st.set_page_config(page_title='Sakamomo-Family-App',
                        page_icon=':chart_with_upwards_trend:',
@@ -52,7 +55,7 @@ def main():
     placeholder = st.empty()
 
     # 認証済みの場合は、メインページへ
-    if st.session_state[TOKEN_KEY]:
+    if check_auth_key():
         chat_page(placeholder=placeholder)
     else:
         login_page(placeholder=placeholder)
