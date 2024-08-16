@@ -27,4 +27,11 @@ class BackendRequester:
             "POST", url,
             data={"message": text},
             headers={'Authorization': 'Bearer {}'.format(token)}
+
         )
+        if resp.status_code != 200:
+            raise Exception(
+                'Bad response from application: {!r} / {!r} / {!r}'.format(
+                    resp.status_code, resp.headers, resp.text))
+        else:
+            return resp.json()
