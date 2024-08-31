@@ -71,7 +71,8 @@ if __name__ == "__main__":
     print("--- start to script ---")
 
     # EDINETから指定した日付の有価証券報告書のリストを取得する
-    output_folder = os.path.join(os.path.dirname(__file__), datetime.now().strftime("%Y%m%d%H%M%S"))
+    output_folder = os.path.join(os.path.dirname(__file__), "output", datetime.now().strftime("%Y%m%d%H%M%S"))
+    os.makedirs(output_folder, exist_ok=True)
     df = get_documents_info_dataframe(target_date=datetime.strptime("2024-05-17", "%Y-%m-%d"))
 
     # doc_idから有価証券報告書をzip形式でダウンロードする
@@ -82,6 +83,7 @@ if __name__ == "__main__":
             download_document(output_folder=output_folder, doc_id=doc_id)
             res.append_success_doc_id(doc_id=doc_id)
         except Exception as e:
+            print(e)
             res.append_error_doc_id(doc_id=doc_id)
 
     # 取得結果を表示する
