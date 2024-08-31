@@ -50,16 +50,21 @@ def get_documents_info_dataframe(target_date: datetime) -> pd.DataFrame:
 
 
 def download_document(output_folder: str, doc_id: str):
-    url = f'https://api.edinet-fsa.go.jp/api/v2/documents/{doc_id}?type=5&Subscription-Key={EDINET_API_KEY}'
+    url = f'https://api.edinet-fsa.go.jp/api/v2/documents/{doc_id}'
     print(doc['edinetCode'], doc['docID'], doc['filerName'], doc['docDescription'], doc['submitDateTime'], sep='\t')
+    params = {
+        "type": 2,
+        "Subscription-Key": EDINET_API_KEY
+    }
 
     try:
-        # ZIPファイルのダウンロード
-        with urllib.request.urlopen(url) as res:
-            content = res.read()
-        output_path = os.path.join(output_folder, f'{doc_id}.zip')
+        res = requests.get(url, params=params, verify=False)
+        output_path = os.path.join(output_folder, f'{doc_id}.pdf')
+        if res.status_code != 200:
+            raise Exception(f"status code is {res.status_code}")
+
         with open(output_path, 'wb') as file_out:
-            file_out.write(content)
+            file_out.write(res.content)
     except urllib.error.HTTPError as e:
         if e.code >= 400:
             sys.stderr.write(e.reason + '\n')
