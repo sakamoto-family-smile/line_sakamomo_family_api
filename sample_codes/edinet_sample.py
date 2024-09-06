@@ -7,7 +7,6 @@ import sys
 import os
 from argparse import ArgumentParser
 from enum import Enum
-from typing import Union
 
 
 
@@ -43,7 +42,7 @@ class DownloadDocumentsResult:
 
 class GetDocumentListResult:
     def __init__(self) -> None:
-        self.df: Union[pd.DataFrame, None] = None
+        self.df: pd.DataFrame
         self.__success_dates = []
         self.__error_dates = []
 
@@ -129,7 +128,6 @@ def download_documents(output_folder: str, target_date: datetime) -> DownloadDoc
 
 def get_documents_list(duration_days: int) -> GetDocumentListResult:
     current_date = datetime.now()
-    duration_days = int(args.duration_days)
     dfs = []
     res = GetDocumentListResult()
     for day in range(duration_days):
