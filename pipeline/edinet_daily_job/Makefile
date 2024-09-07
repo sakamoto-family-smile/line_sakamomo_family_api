@@ -26,7 +26,8 @@ deploy_job:
 run_job:
 	gcloud run jobs execute ${JOB_NAME} --wait \
 		--region ${GOOGLE_REGION} \
-		--set-env-vars DURATION_DAYS=${DURATION_DAYS}
+		--update-env-vars DURATION_DAYS=${DURATION_DAYS}
 
 delete_job:
-	gcloud run jobs delete ${JOB_NAME}
+	gcloud run jobs delete ${JOB_NAME} \
+		--region ${GOOGLE_REGION}

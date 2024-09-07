@@ -1,9 +1,8 @@
-from argparse import ArgumentParser
 import os
 from dotenv import load_dotenv
 from google.cloud import bigquery
 
-from .edinet_wrapper import EdinetWrapper
+from edinet_wrapper import EdinetWrapper
 
 
 def main(duration_days: int, api_key: str, table_id: str):
