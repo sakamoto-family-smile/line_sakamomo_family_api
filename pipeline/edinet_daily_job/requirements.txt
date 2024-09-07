@@ -1,0 +1,3 @@
+pandas
+dotenv
+google-cloud-bigquery
