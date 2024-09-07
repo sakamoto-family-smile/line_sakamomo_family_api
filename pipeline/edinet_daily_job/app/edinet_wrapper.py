@@ -14,7 +14,8 @@ import os
 
 
 class DownloadResult:
-    def __init__(self) -> None:
+    def __init__(self, target_date: datetime) -> None:
+        self.target_date = target_date
         self.__success_document_ids = []
         self.__error_document_ids = []
 
@@ -38,8 +39,9 @@ class DownloadResult:
 
 
 class GetDocumentListResult:
-    def __init__(self) -> None:
+    def __init__(self, current_date: datetime) -> None:
         self.df: pd.DataFrame
+        self.current_date = current_date
         self.__success_dates = []
         self.__error_dates = []
 
@@ -113,7 +115,7 @@ class EdinetWrapper:
         df = self.get_documents_info_dataframe(target_date=target_date)
 
         # 有価証券報告書を指定したフォルダにダウンロードする
-        res = DownloadResult()
+        res = DownloadResult(target_date=target_date)
         for _, doc in df.iterrows():
             print(doc['edinetCode'], doc['docID'], doc['filerName'], doc['docDescription'], doc['submitDateTime'], sep='\t')
             doc_id = doc['docID']
@@ -130,7 +132,7 @@ class EdinetWrapper:
     def get_documents_list(self, duration_days: int) -> GetDocumentListResult:
         current_date = datetime.now()
         dfs = []
-        res = GetDocumentListResult()
+        res = GetDocumentListResult(current_date=current_date)
         for day in range(duration_days):
             target_date = current_date - timedelta(days=day)
             print(target_date.strftime("%Y-%m-%d"))
