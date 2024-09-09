@@ -68,6 +68,10 @@ class EdinetWrapper:
     def __init__(self, api_key: str, output_folder: str = None) -> None:
         self.__api_key = api_key
         self.__output_folder = os.path.join(os.path.dirname(__file__), "output", datetime.now().strftime("%Y%m%d%H%M%S")) if output_folder is None else output_folder
+        os.makedirs(self.__output_folder, exist_ok=True)
+
+    def get_document_url(self, doc_id: str) -> str:
+        return f'https://api.edinet-fsa.go.jp/api/v2/documents/{doc_id}'
 
     def get_documents_info_dataframe(self, target_date: datetime) -> pd.DataFrame:
         url = 'https://disclosure.edinet-fsa.go.jp/api/v2/documents.json'
@@ -90,7 +94,7 @@ class EdinetWrapper:
         return df
 
     def download_pdf_of_financial_report(self, doc_id: str):
-        url = f'https://api.edinet-fsa.go.jp/api/v2/documents/{doc_id}'
+        url = self.get_document_url(doc_id=doc_id)
         params = {
             "type": 2,  # PDFを取得する場合は2を指定
             "Subscription-Key": self.__api_key

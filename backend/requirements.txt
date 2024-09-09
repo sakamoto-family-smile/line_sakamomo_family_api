@@ -12,3 +12,4 @@ langchain-google-memorystore-redis
 langchain-google-firestore
 firebase_admin
 pysen[lint]
+google-cloud-bigquery
