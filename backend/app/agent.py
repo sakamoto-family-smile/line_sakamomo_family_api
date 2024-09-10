@@ -2,6 +2,7 @@ import os
 from datetime import datetime
 from logging import Logger, StreamHandler, getLogger
 from typing import List, Optional, Type
+from abc import abstractmethod, ABC
 
 import google.cloud.firestore
 import requests
@@ -32,11 +33,13 @@ class WeatherInfo(BaseModel):
 
 class LLMAgentResponse(BaseModel):
     text: str
+    metadata: dict
 
 
-class CustomAgentConfig(BaseModel):
+class MainAgentConfig(BaseModel):
     dialogue_session_id: str
     memory_store_type: str = "firestore"
+    debug_mode: bool = False
 
 
 class AgentUtil:
@@ -64,14 +67,20 @@ class AgentUtil:
         return info
 
 
-class CustomAgent:
-    def __init__(self, agent_config: CustomAgentConfig, logger: Logger = None) -> None:
+class AbstractAgent(ABC):
+    @abstractmethod
+    def get_llm_agent_response(self, input_data) -> LLMAgentResponse:
+        pass
+
+
+class MainAgent(AbstractAgent):
+    def __init__(self, agent_config: MainAgentConfig, logger: Logger = None) -> None:
         self.__agent_config = agent_config
         self.__logger = logger if logger is not None else local_logger
 
         # LLM Agentの作成
         llm = VertexAI(
-            model_name="gemini-1.5-pro-preview-0409",
+            model_name=os.environ.get("LLM_MODEL_NAME", "gemini-1.5-pro-preview-0409"),
             temperature=0.5,
             max_output_tokens=400,
             location=os.environ["GCP_LOCATION"],
@@ -92,6 +101,12 @@ class CustomAgent:
                 "collection": "HistoryMessages",
             },
         )
+
+        # デバッグ用に過去履歴のメッセージを出力する
+        if self.__agent_config.debug_mode:
+            for i, message in enumerate(memory.messages):
+                print(f"{i} : id={message.id}, name={message.name}, message={message.content}, add_kwargs={message.additional_kwargs}, metadata={message.response_metadata}")
+
         self.__agent_with_chat_history = RunnableWithMessageHistory(
             self.__agent,
             # This is needed because in most real world scenarios, a session id is needed
@@ -105,13 +120,13 @@ class CustomAgent:
         info = AgentUtil.get_weather_info(area_name=area_name)
         return info
 
-    def get_llm_agent_response(self, text: str) -> LLMAgentResponse:
+    def get_llm_agent_response(self, input_data: str) -> LLMAgentResponse:
         self.__logger.info("start get_llm_agent_response...")
         res = self.__agent_with_chat_history.invoke(
-            {"input": text},
+            {"input": input_data},
             config={"configurable": {"session_id": self.__agent_config.dialogue_session_id}},
         )
-        return LLMAgentResponse(text=res["output"])
+        return LLMAgentResponse(text=res["output"], metadata={})
 
     def get_chat_message_history(self, memory_type: str, config: dict) -> BaseChatMessageHistory:
         if memory_type == "local":
@@ -129,6 +144,15 @@ class CustomAgent:
         #    logger=self.__logger
         # ))
         return tools
+
+
+class FinancialReportAgent(AbstractAgent):
+    def __init__(self) -> None:
+        super().__init__()
+
+    def get_llm_agent_response(self, input_data) -> LLMAgentResponse:
+        # TODO : imp
+        return LLMAgentResponse(text="", metadata={})
 
 
 class TodoRegisterInput(BaseModel):

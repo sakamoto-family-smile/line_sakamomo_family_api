@@ -3,7 +3,7 @@ from typing import List
 from google.cloud import bigquery
 import os
 
-from agent import CustomAgent, CustomAgentConfig
+from agent import MainAgent, MainAgentConfig
 from todo_util import TodoHandler
 from edinet_wrapper import EdinetWrapper
 
@@ -15,11 +15,11 @@ logger.setLevel("DEBUG")
 
 class Controller:
     def __init__(self, dialogue_session_id: str, edinet_api_key: str) -> None:
-        agent_config = CustomAgentConfig(
+        agent_config = MainAgentConfig(
             dialogue_session_id=dialogue_session_id,
             memory_store_type="firestore"
         )
-        self.__agent = CustomAgent(agent_config=agent_config)
+        self.__agent = MainAgent(agent_config=agent_config)
         self.__todo_handler = TodoHandler(
             family_id=agent_config.dialogue_session_id,
             collection_id="ToDoHistory",
@@ -44,7 +44,7 @@ class Controller:
         # LLMでの解析処理を実施
         else:
             try:
-                res = self.__agent.get_llm_agent_response(text=message).text
+                res = self.__agent.get_llm_agent_response(input_data=message).text
             except Exception as e:
                 logger.error(e)
                 res = "LLMのレスポンスでエラーが発生しました."
