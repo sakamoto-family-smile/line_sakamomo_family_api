@@ -1,6 +1,7 @@
 import os
 import google.generativeai as genai
 import PyPDF2
+from datetime import datetime
 
 
 API_KEY = "xxxx"
@@ -25,7 +26,14 @@ def main(pdf_path: str):
     内容に含まれる財務三表の内容を踏まえて、企業の分析を行なってください。
     """
     res = model.generate_content([prompt, pdf_file])
-    print(res)
+
+    # 結果を書き込む
+    print(res.text)
+    output_folder = os.path.join(os.path.dirname(__file__), "output", "gemini_sample")
+    os.makedirs(output_folder, exist_ok=True)
+    output_path = os.path.join(output_folder, "{}.txt".format(datetime.now().strftime("%Y%m%d%H%M%S")))
+    with open(output_path, "w") as f:
+        f.write(res.text)
 
 
 if __name__ == "__main__":
