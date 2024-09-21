@@ -3,6 +3,8 @@ from datetime import datetime
 from logging import Logger, StreamHandler, getLogger
 from typing import List, Optional, Type
 from abc import abstractmethod, ABC
+import json
+from collections.abc import Iterable
 
 import google.cloud.firestore
 import requests
@@ -15,6 +17,11 @@ from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_google_firestore import FirestoreChatMessageHistory
 from langchain_google_vertexai import VertexAI
 from pydantic import BaseModel
+
+import vertexai
+from vertexai.generative_models import GenerativeModel, Part, GenerationConfig, GenerationResponse
+from proto.marshal.collections import RepeatedComposite
+from google.cloud import storage
 
 from .firebase_util import get_db_client_with_default_credentials
 
@@ -39,6 +46,14 @@ class LLMAgentResponse(BaseModel):
 class MainAgentConfig(BaseModel):
     dialogue_session_id: str
     memory_store_type: str = "firestore"
+    debug_mode: bool = False
+
+
+class FinancialAgentConfig(BaseModel):
+    llm_model_name: str = "gemini-1.5-flash"
+    temperature: int = 0
+    log_bucket_name: str = "sakamomo_family_api"
+    log_base_folder: str = "log"
     debug_mode: bool = False
 
 
@@ -69,7 +84,7 @@ class AgentUtil:
 
 class AbstractAgent(ABC):
     @abstractmethod
-    def get_llm_agent_response(self, input_data) -> LLMAgentResponse:
+    def get_llm_agent_response(self, input_data: dict) -> LLMAgentResponse:
         pass
 
 
@@ -147,12 +162,108 @@ class MainAgent(AbstractAgent):
 
 
 class FinancialReportAgent(AbstractAgent):
-    def __init__(self) -> None:
+    def __init__(self, config: FinancialAgentConfig) -> None:
         super().__init__()
 
-    def get_llm_agent_response(self, input_data) -> LLMAgentResponse:
-        # TODO : imp
-        return LLMAgentResponse(text="", metadata={})
+        vertexai.init(
+            project=os.environ["GCP_PROJECT"],
+            location=os.environ["GCP_LOCATION"]
+        )
+        self.__model = GenerativeModel(model_name=config.llm_model_name)
+        self.__config = config
+        self.__generation_config = GenerationConfig(
+            temperature=config.temperature
+        )
+        self.__work_folder = os.path.join(os.path.dirname(__file__), "work")
+        os.makedirs(self.__work_folder, exist_ok=True)
+
+    def get_llm_agent_response(self, input_data: dict) -> LLMAgentResponse:
+        # gcs uriからpdfデータを取得
+        # TODO : 将来的に複数のデータタイプに対応させてもよさそう
+        gcs_uri = input_data["gcs_uri"]
+        prompt = input_data["prompt"]
+        file_data = Part.from_uri(uri=gcs_uri, mime_type="application/pdf")
+
+        # LLMを利用した解析処理を実施
+        contents = [file_data, prompt]
+        response = self.__model.generate_content(contents=contents,
+                                                 generation_config=self.__generation_config)
+
+        # 解析結果含めて、ログとして出力
+        self.__upload_llm_log(response=response,
+                              request_id=input_data["request_id"],
+                              prompt=prompt,
+                              timestamp=input_data["timestamp"])
+
+        # 解析結果を返す
+        return LLMAgentResponse(text=response.text, metadata={})
+
+    def __upload_llm_log(self, response: GenerationResponse | Iterable[GenerationResponse], request_id: str, prompt: str, timestamp: datetime):
+        # citation_metadataオブジェクトをリストに変換する
+        def repeated_citations_to_list(citations: RepeatedComposite) -> list:
+            citation_li = []
+            for citation in citations:
+                citation_dict = {}
+                citation_dict["startIndex"] = citation.startIndex
+                citation_dict["endIndex"] = citation.endIndex
+                citation_dict["uri"] = citation.uri
+                citation_dict["title"] = citation.title
+                citation_dict["license"] = citation.license
+                citation_dict["publicationDate"] = citation.publicationDate
+                citation_li.append(citation_dict)
+            return citation_li
+
+        # safety_ratingsオブジェクトをリストに変換する
+        def repeated_safety_ratings_to_list(safety_ratings: RepeatedComposite) -> list:
+            safety_rating_li = []
+            for safety_rating in safety_ratings:
+                safety_rating_dict = {}
+                safety_rating_dict["category"] = safety_rating.category.name
+                safety_rating_dict["probability"] = safety_rating.probability.name
+                safety_rating_li.append(safety_rating_dict)
+            return safety_rating_li
+
+        # llmのログをローカルに生成
+        llm_log_data = {
+            "input": {
+                "input_datas": [],
+                "prompt": prompt,
+                "model_name": self.__config.llm_model_name,
+                "llm_config": {
+                    "temperature": self.__config.temperature
+                },
+                "prompt_token_count": response._raw_response.usage_metadata.prompt_token_count,
+            },
+            "output": {
+                "text": response.candidates[0].text,
+                "finish_reason": response.candidates[0].finish_reason.name,
+                "finish_message": response.candidates[0].finish_message,
+                "safety_ratings": repeated_safety_ratings_to_list(response.candidates[0].safety_ratings),
+                "citation_metadata": repeated_citations_to_list(response.candidates[0].citation_metadata.citations),
+                "candidates_token_count": response._raw_response.usage_metadata.candidates_token_count,
+                "total_token_count": response._raw_response.usage_metadata.total_token_count
+            },
+            "meta": {
+                "timestamp": timestamp.strftime("%Y%m%d%H%M%S"),
+                "request_id": request_id
+            }
+        }
+        tmp_log_file = os.path.join(self.__work_folder, "tmp_log.json")
+        with open(tmp_log_file, "w") as f:
+            json.dump(llm_log_data, f, ensure_ascii=False)
+
+        # ログをGCSにアップロードする
+        try:
+            storage_client = storage.Client(project=os.environ["GCP_PROJECT"])
+            datetime_str = timestamp.strftime("%Y%m%d%H%M%S")
+            bucket = storage_client.bucket(self.__config.log_bucket_name)
+            blob = bucket.blob(f"{self.__config.log_base_folder}/{datetime_str}/{request_id}/llm_log.json")
+            blob.upload_from_filename(tmp_log_file, if_generation_match=0)
+        except Exception as e:
+            print(e)
+            raise Exception(e)
+        finally:
+            os.remove(tmp_log_file)
 
 
 class TodoRegisterInput(BaseModel):
