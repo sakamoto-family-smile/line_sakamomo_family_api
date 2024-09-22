@@ -120,6 +120,7 @@ def analyze_financial_document(request: AnalyzeFinancialReportRequest):
     )
 
 
+# TODO : この機能はバイナリファイルを受け取れるようにするか、ユーザーには提供しない機能とするか、検討した方が良さそう
 @app.post("/upload_financial_report")
 def upload_financial_report(request: UploadFinancialReportRequest):
     try:
