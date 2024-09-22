@@ -161,6 +161,7 @@ class MainAgent(AbstractAgent):
         return tools
 
 
+# TODO : request_idをcontroller側のみで意識できるようにログのアップロード周りはcontroller側で実施した方が良いかもしれない
 class FinancialReportAgent(AbstractAgent):
     def __init__(self, config: FinancialAgentConfig) -> None:
         super().__init__()
@@ -193,12 +194,19 @@ class FinancialReportAgent(AbstractAgent):
         self.__upload_llm_log(response=response,
                               request_id=input_data["request_id"],
                               prompt=prompt,
-                              timestamp=input_data["timestamp"])
+                              timestamp=input_data["timestamp"],
+                              gcs_uri=gcs_uri)
 
         # 解析結果を返す
         return LLMAgentResponse(text=response.text, metadata={})
 
-    def __upload_llm_log(self, response: GenerationResponse | Iterable[GenerationResponse], request_id: str, prompt: str, timestamp: datetime):
+    # TODO : リファクタリングする（内部関数とかをutilとかに切り出す）
+    def __upload_llm_log(self,
+                         response: GenerationResponse | Iterable[GenerationResponse],
+                         request_id: str,
+                         prompt: str,
+                         timestamp: datetime,
+                         gcs_uri: str):
         # citation_metadataオブジェクトをリストに変換する
         def repeated_citations_to_list(citations: RepeatedComposite) -> list:
             citation_li = []
@@ -233,6 +241,7 @@ class FinancialReportAgent(AbstractAgent):
                     "temperature": self.__config.temperature
                 },
                 "prompt_token_count": response._raw_response.usage_metadata.prompt_token_count,
+                "gcs_uri": gcs_uri
             },
             "output": {
                 "text": response.candidates[0].text,
