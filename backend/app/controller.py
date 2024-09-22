@@ -24,7 +24,7 @@ class Response(BaseModel):
 
 
 class Controller:
-    def __init__(self, dialogue_session_id: str, edinet_api_key: str) -> None:
+    def __init__(self, dialogue_session_id: str) -> None:
         # MainAgentの初期化
         agent_config = MainAgentConfig(
             dialogue_session_id=dialogue_session_id,
@@ -41,7 +41,7 @@ class Controller:
         self.__output_folder = os.path.join(os.path.dirname(__file__), "output")
         os.makedirs(self.__output_folder, exist_ok=True)
         self.__edinet_wrapper = EdinetWrapper(
-            api_key=edinet_api_key,
+            api_key=os.environ["EDINET_API_KEY"],
             output_folder=self.__output_folder
         )
 
