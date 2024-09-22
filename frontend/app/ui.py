@@ -1,5 +1,6 @@
 import streamlit as st
 from dataclasses import dataclass
+import os
 
 from login import LoginHelper
 from backend_util import BackendRequester
@@ -109,6 +110,45 @@ def chat_widget():
         st.session_state[CHAT_HISTORY].append(ChatMessage(role="ai", content=ai_message))
 
 
+def financial_report_analysis_page(placeholder):
+    backend_requester = BackendRequester()
+
+    # 決算書を分析するページの作成
+    with placeholder.container():
+        st.title("Analysis Financial Report")
+
+        # apiが使えるかをチェックしておく
+        with st.spinner("please wait for health check.."):
+            try:
+                backend_requester.request_health_check(token=st.session_state[TOKEN_KEY])
+            except Exception as e:
+                print(e)
+
+                # tokenの更新が必要と判断し、token情報を削除して、画面をリロードする
+                expired_token_dialogue()
+
+        # 決算書を分析するためのUIを作成
+        financial_report_analysis_widget()
+
+
+def financial_report_analysis_widget():
+    # TODO : imp
+    pass
+
+
+# def need_login_page() -> bool:
+#     return int(os.environ.get("NEED_LOGIN_PAGE", 1)) == 1
+
+
+def main_page(placeholder):
+    chat_tab, financial_report_analysis_tab = st.tabs(["チャット", "決算書分析"])
+
+    with chat_tab:
+        chat_page(placeholder=placeholder)
+    with financial_report_analysis_tab:
+        financial_report_analysis_page(placeholder=placeholder)
+
+
 def main():
     st.set_page_config(page_title='Sakamomo-Family-App',
                        page_icon=':chart_with_upwards_trend:',
@@ -118,7 +158,7 @@ def main():
 
     # 認証済みの場合は、メインページへ
     if check_auth_key():
-        chat_page(placeholder=placeholder)
+        main_page(placeholder=placeholder)
     else:
         login_page(placeholder=placeholder)
 
