@@ -110,7 +110,9 @@ def analyze_financial_document(request: AnalyzeFinancialReportRequest):
         message = None
 
     try:
-        res = controller.analyze_financial_document(gcs_uri=request.gcs_uri, message=message)
+        res = controller.analyze_financial_document(
+            gcs_uri=request.gcs_uri, message=message
+        )
     except Exception as e:
         logger.error(e)
         raise HTTPException(status_code=500, detail="Internal Server Error. Analysis Financial Report process is failed.")

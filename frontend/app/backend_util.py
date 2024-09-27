@@ -22,8 +22,45 @@ class BackendRequester:
             return resp.json()
 
     def request_bot(self, token: str, text: str) -> dict:
-        url = f"{self.__backend_url}/bot"
-        data = {"message": text}
+        return self.request_api(
+            token=token,
+            request_name="bot",
+            data={
+                "message": text
+            }
+        )
+
+    def request_financial_document_list(self, token: str, company_name: str) -> dict:
+        return self.request_api(
+            token=token,
+            request_name="financial_document_list",
+            data={
+                "company_name": company_name
+            }
+        )
+
+    def request_upload_financial_report(self, token: str, doc_id: str) -> dict:
+        return self.request_api(
+            token=token,
+            request_name="upload_financial_report",
+            data={
+                "doc_id": doc_id
+            }
+        )
+
+    def request_analyze_financial_document(self, token: str, analysis_type: int, gcs_uri: str, message: str) -> dict:
+        return self.request_api(
+            token=token,
+            request_name="analyze_financial_document",
+            data={
+                "analysis_type": analysis_type,
+                "gcs_uri": gcs_uri,
+                "message": message
+            }
+        )
+
+    def request_api(self, token: str, request_name: str, data: dict) -> dict:
+        url = f"{self.__backend_url}/{request_name}"
         resp = requests.request(
             "POST", url,
             data=json.dumps(data),
