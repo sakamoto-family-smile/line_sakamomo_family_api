@@ -130,8 +130,17 @@ def financial_report_analysis_page():
 
 
 def financial_report_analysis_widget():
-    # TODO : imp
-    pass
+    company_name = st.text_input(label="企業名")
+    search_btn = st.button(label="検索")
+    if search_btn:
+        backend_requester = BackendRequester()
+
+        with st.spinner("please wait to search the financial report.."):
+            res = backend_requester.request_financial_document_list(
+                token=st.session_state[TOKEN_KEY],
+                company_name=company_name
+            )
+        st.text(res)
 
 
 def main_page(placeholder):
