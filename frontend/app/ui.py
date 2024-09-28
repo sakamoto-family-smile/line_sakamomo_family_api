@@ -4,6 +4,7 @@ from logging import StreamHandler, getLogger
 
 from login import LoginHelper
 from backend_util import BackendRequester
+import pandas as pd
 
 
 # グローバル変数
@@ -146,7 +147,35 @@ def financial_report_analysis_widget():
                 token=st.session_state[TOKEN_KEY],
                 company_name=company_name
             )
-        st.text(res)
+
+        # dataframeに変換し、tableとして表示
+        df = pd.DataFrame.from_dict(res["document_list"])
+        st.table(df)
+
+        # 指定したドキュメントを分析する
+        document_name = st.selectbox(
+            "分析したい決算資料を選択してください",
+            df["filer_name"].tolist()
+        )
+        analyze_btn = st.button("解析開始")
+        if analyze_btn:
+            # ドキュメントをEDINETから、GCSにアップロードする
+            doc_id = df.query(f"filer_name == {document_name}").iloc[0]["doc_id"]
+            res = backend_requester.request_upload_financial_report(
+                token=st.session_state[TOKEN_KEY],
+                doc_id=doc_id
+            )
+
+            # 対象となる決算資料を分析する
+            res = backend_requester.request_analyze_financial_document(
+                token=st.session_state[TOKEN_KEY],
+                analysis_type=0,
+                gcs_uri=res["gcs_uri"],
+                message=""
+            )
+
+            # 解析結果を出力する
+            st.text(res["text"])
 
 
 def main_page(placeholder):
