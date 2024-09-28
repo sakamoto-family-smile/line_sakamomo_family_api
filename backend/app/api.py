@@ -92,7 +92,7 @@ def financial_document_list(request: FinancialDocumentListRequest):
                 doc_id=item["doc_id"],
                 doc_url=item["doc_url"],
                 filer_name=item["filer_name"],
-                document_description=item["document_description"]
+                document_description=item["doc_description"]
             )
             for item in res.deteil["items"]
         ]

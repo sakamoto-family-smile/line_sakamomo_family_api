@@ -16,3 +16,4 @@ google-cloud-bigquery
 google-generativeai
 google-cloud-storage
 PyPDF2
+pandas

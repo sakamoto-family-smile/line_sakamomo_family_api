@@ -6,10 +6,10 @@ from uuid import uuid4
 from pydantic import BaseModel
 from datetime import datetime
 
-from agent import MainAgent, MainAgentConfig, FinancialReportAgent, FinancialAgentConfig
-from todo_util import TodoHandler
-from edinet_wrapper import EdinetWrapper
-from gcp_util import upload_file_into_gcs
+from .agent import MainAgent, MainAgentConfig, FinancialReportAgent, FinancialAgentConfig
+from .todo_util import TodoHandler
+from .edinet_wrapper import EdinetWrapper
+from .gcp_util import upload_file_into_gcs
 
 
 logger = getLogger(__name__)
@@ -75,7 +75,7 @@ class Controller:
         # 会社名から、bigqueryを検索し、有価証券報告書のリストを取得する
         client = bigquery.Client()
         items: List[dict] = []
-        with open(os.path.join("sql", "search_company.sql"), "r") as f:
+        with open(os.path.join(os.path.dirname(__file__), "sql", "search_company.sql"), "r") as f:
             query = f.read().format(company_name=company_name)
             query_job = client.query(query)
             rows = query_job.result()
@@ -88,6 +88,7 @@ class Controller:
                     "doc_url": f"{self.__edinet_wrapper.get_document_url(doc_id=doc_id)}"
                 }
                 items.append(item)
+
         return Response(
             request_id=str(request_id),
             timestamp=current_time,
