@@ -1,6 +1,6 @@
 import streamlit as st
 from dataclasses import dataclass
-import os
+from logging import StreamHandler, getLogger
 
 from login import LoginHelper
 from backend_util import BackendRequester
@@ -9,6 +9,12 @@ from backend_util import BackendRequester
 # グローバル変数
 TOKEN_KEY = "authenticated"
 CHAT_HISTORY = "CHAT_MESSAGES"
+
+
+# Loggerの設定
+logger = getLogger(__name__)
+logger.addHandler(StreamHandler())
+logger.setLevel("DEBUG")
 
 
 @dataclass
@@ -66,7 +72,7 @@ def chat_page():
         try:
             backend_requester.request_health_check(token=st.session_state[TOKEN_KEY])
         except Exception as e:
-            print(e)
+            logger.error(e)
 
             # tokenの更新が必要と判断し、token情報を削除して、画面をリロードする
             expired_token_dialogue()
@@ -120,7 +126,7 @@ def financial_report_analysis_page():
         try:
             backend_requester.request_health_check(token=st.session_state[TOKEN_KEY])
         except Exception as e:
-            print(e)
+            logger.error(e)
 
             # tokenの更新が必要と判断し、token情報を削除して、画面をリロードする
             expired_token_dialogue()

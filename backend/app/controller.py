@@ -105,7 +105,8 @@ class Controller:
 
         # 取得したpdfを、gcsにアップロードする
         file_name = os.path.basename(file_path)
-        gcs_file_path = f"document/{current_time.strftime("%Y%m%d%H%M%S")}/{request_id}/{file_name}"
+        current_time_str = current_time.strftime("%Y%m%d%H%M%S")
+        gcs_file_path = f"document/{current_time_str}/{request_id}/{file_name}"
         gcs_uri = upload_file_into_gcs(project_id=os.environ["GCP_PROJECT"],
                              bucket_name=self.__financial_agent_config.log_bucket_name,
                              remote_file_path=gcs_file_path,
