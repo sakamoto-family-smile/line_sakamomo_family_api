@@ -155,16 +155,27 @@ def financial_report_analysis_widget():
         # 指定したドキュメントを分析する
         document_name = st.selectbox(
             "分析したい決算資料を選択してください",
-            df["filer_name"].tolist()
+            [
+                item["filer_name"] + "_" + item["document_description"]
+                for _, item in df.iterrows()
+            ]
         )
         analyze_btn = st.button("解析開始")
+        logger.info("LLMの解析開始")
         if analyze_btn:
             # ドキュメントをEDINETから、GCSにアップロードする
             doc_id = df.query(f"filer_name == {document_name}").iloc[0]["doc_id"]
+
+            # debug
+            logger.info(f"doc_id = {doc_id}")
+
             res = backend_requester.request_upload_financial_report(
                 token=st.session_state[TOKEN_KEY],
                 doc_id=doc_id
             )
+
+            # debug
+            logger.info(f"upload res = {res}")
 
             # 対象となる決算資料を分析する
             res = backend_requester.request_analyze_financial_document(
@@ -173,6 +184,9 @@ def financial_report_analysis_widget():
                 gcs_uri=res["gcs_uri"],
                 message=""
             )
+
+            # debug
+            logger.info(f"analyze res = {res}")
 
             # 解析結果を出力する
             st.text(res["text"])
