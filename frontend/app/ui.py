@@ -153,6 +153,8 @@ def financial_report_analysis_widget():
     company_name = st.text_input(label="企業名")
     search_btn = st.button(label="検索")
     if search_btn:
+        set_document_list(df=pd.DataFrame())
+
         # 検索ボタンが押されたら、キーワードに合わせたドキュメントを検索する
         backend_requester = BackendRequester()
 
@@ -180,10 +182,6 @@ def financial_report_analysis_widget():
             ]
         ))
         analyze_btn = st.button("解析開始")
-
-        # debug
-        logger.info("LLMの解析開始")
-
         if analyze_btn:
             # 指定したドキュメントを分析する
             backend_requester = BackendRequester()
@@ -193,28 +191,20 @@ def financial_report_analysis_widget():
             doc_id = df.query(
                 f'filer_name == "{filer_name}" & document_description == "{document_description}"'
             ).iloc[0]["doc_id"]
-
-            # debug
-            logger.info(f"doc_id = {doc_id}")
-
             res = backend_requester.request_upload_financial_report(
                 token=st.session_state[TOKEN_KEY],
                 doc_id=doc_id
             )
 
-            # debug
-            logger.info(f"upload res = {res}")
-
             # 対象となる決算資料を分析する
+            gcs_uri = res["gcs_uri"]
+            st.text(f"gcs uri : {gcs_uri}")
             res = backend_requester.request_analyze_financial_document(
                 token=st.session_state[TOKEN_KEY],
                 analysis_type=0,
-                gcs_uri=res["gcs_uri"],
+                gcs_uri=gcs_uri,
                 message=""
             )
-
-            # debug
-            logger.info(f"analyze res = {res}")
 
             # 解析結果を出力する
             st.text(res["text"])

@@ -1,15 +1,13 @@
 import os
 from datetime import datetime
 from logging import Logger, StreamHandler, getLogger
-from typing import List, Optional, Type
+from typing import List
 from abc import abstractmethod, ABC
 import json
 from collections.abc import Iterable
 
-import google.cloud.firestore
 import requests
 from langchain.agents import AgentType, initialize_agent, load_tools
-from langchain.callbacks.manager import AsyncCallbackManagerForToolRun, CallbackManagerForToolRun
 from langchain.memory import ConversationBufferMemory
 from langchain.tools.base import BaseTool
 from langchain_core.chat_history import BaseChatMessageHistory
@@ -21,9 +19,10 @@ from pydantic import BaseModel
 import vertexai
 from vertexai.generative_models import GenerativeModel, Part, GenerationConfig, GenerationResponse
 from proto.marshal.collections import RepeatedComposite
-from google.cloud import storage
+from io import BytesIO
 
 from .firebase_util import get_db_client_with_default_credentials
+from .gcp_util import upload_file_into_gcs, download_file_from_gcs
 
 local_logger = getLogger(__name__)
 local_logger.addHandler(StreamHandler())
@@ -180,19 +179,38 @@ class FinancialReportAgent(AbstractAgent):
 
     def get_llm_agent_response(self, input_data: dict) -> LLMAgentResponse:
         # gcs uriからpdfデータを取得
+        # TODO : part.from_uriだと、なぜかLLMがpdfデータを認識できないので、ローカルに落としてから、byte dataとしてLLMに渡す
         # TODO : 将来的に複数のデータタイプに対応させてもよさそう
-        gcs_uri = input_data["gcs_uri"]
-        prompt = input_data["prompt"]
-        file_data = Part.from_uri(uri=gcs_uri, mime_type="application/pdf")
+        gcs_uri: str = input_data["gcs_uri"]
+        prompt: str = input_data["prompt"]
+        request_id: str = input_data["request_id"]
+        # file_data = Part.from_uri(uri=gcs_uri, mime_type="application/pdf")
+
+        # GCSからローカルにpdfを落として、byte dataなfile dataに変換する
+        local_file_path = os.path.join(self.__work_folder, f"{request_id}.pdf")
+        remote_path_with_bucket_name = gcs_uri.replace("gs://", "")
+        bucket_name, remote_path = remote_path_with_bucket_name.split("/", 1)
+        download_file_from_gcs(project_id=os.environ["GCP_PROJECT"],
+                               bucket_name=bucket_name,
+                               remote_file_path=remote_path,
+                               local_file_path=local_file_path)
+        with open(local_file_path, "rb") as f:
+            byte_datas = BytesIO(f.read())
+        file_data = Part.from_data(data=byte_datas.getvalue(), mime_type="application/pdf")
 
         # LLMを利用した解析処理を実施
         contents = [file_data, prompt]
+
+        # debug
+        for content in contents:
+            local_logger.info(f"agent log : content : {content}")
+
         response = self.__model.generate_content(contents=contents,
                                                  generation_config=self.__generation_config)
 
         # 解析結果含めて、ログとして出力
         self.__upload_llm_log(response=response,
-                              request_id=input_data["request_id"],
+                              request_id=request_id,
                               prompt=prompt,
                               timestamp=input_data["timestamp"],
                               gcs_uri=gcs_uri)
@@ -263,11 +281,18 @@ class FinancialReportAgent(AbstractAgent):
 
         # ログをGCSにアップロードする
         try:
-            storage_client = storage.Client(project=os.environ["GCP_PROJECT"])
+            #storage_client = storage.Client(project=os.environ["GCP_PROJECT"])
+            #datetime_str = timestamp.strftime("%Y%m%d%H%M%S")
+            #bucket = storage_client.bucket(self.__config.log_bucket_name)
+            #blob = bucket.blob(f"{self.__config.log_base_folder}/{datetime_str}/{request_id}/llm_log.json")
+            #blob.upload_from_filename(tmp_log_file, if_generation_match=0)
             datetime_str = timestamp.strftime("%Y%m%d%H%M%S")
-            bucket = storage_client.bucket(self.__config.log_bucket_name)
-            blob = bucket.blob(f"{self.__config.log_base_folder}/{datetime_str}/{request_id}/llm_log.json")
-            blob.upload_from_filename(tmp_log_file, if_generation_match=0)
+            upload_file_into_gcs(
+                project_id=os.environ["GCP_PROJECT"],
+                bucket_name=self.__config.log_bucket_name,
+                remote_file_path=f"{self.__config.log_base_folder}/{datetime_str}/{request_id}/llm_log.json",
+                local_file_path=tmp_log_file
+            )
         except Exception as e:
             print(e)
             raise Exception(e)
