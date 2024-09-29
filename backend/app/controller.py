@@ -120,7 +120,7 @@ class Controller:
                         })
 
     def analyze_financial_document(self, gcs_uri: str, message: str | None = None) -> Response:
-        request_id = uuid4()
+        request_id = str(uuid4())
         current_time = datetime.now()
 
         # pdfをLLMに送って、解析させる(CustomAgentか新規のAgentを用いる)
@@ -129,11 +129,13 @@ class Controller:
         """
         prompt = message if message is not None else default_prompt
         input_data = {
+            "request_id": request_id,
             "gcs_uri": gcs_uri,
-            "prompt": prompt
+            "prompt": prompt,
+            "timestamp": current_time
         }
         agent_response = self.__financial_agent.get_llm_agent_response(input_data=input_data)
-        return Response(request_id=str(request_id),
+        return Response(request_id=request_id,
                         timestamp=current_time,
                         deteil={
                             "response_text": agent_response.text,

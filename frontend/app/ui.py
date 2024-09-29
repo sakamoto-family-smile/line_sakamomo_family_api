@@ -10,6 +10,7 @@ import pandas as pd
 # グローバル変数
 TOKEN_KEY = "authenticated"
 CHAT_HISTORY = "CHAT_MESSAGES"
+DOCUMENT_LIST_KEY = "document_list"
 
 
 # Loggerの設定
@@ -60,6 +61,18 @@ def expired_token_dialogue():
     if st.button("OK"):
         del st.session_state[TOKEN_KEY]
         st.rerun()
+
+
+def set_document_list(df: pd.DataFrame):
+    st.session_state[DOCUMENT_LIST_KEY] = df
+
+
+def get_document_list() -> pd.DataFrame:
+    if DOCUMENT_LIST_KEY in st.session_state:
+        return st.session_state[DOCUMENT_LIST_KEY]
+    else:
+        # ドキュメントリストがない場合は空のリストを返す
+        return pd.DataFrame()
 
 
 def chat_page():
@@ -140,6 +153,7 @@ def financial_report_analysis_widget():
     company_name = st.text_input(label="企業名")
     search_btn = st.button(label="検索")
     if search_btn:
+        # 検索ボタンが押されたら、キーワードに合わせたドキュメントを検索する
         backend_requester = BackendRequester()
 
         with st.spinner("please wait to search the financial report.."):
@@ -148,23 +162,37 @@ def financial_report_analysis_widget():
                 company_name=company_name
             )
 
-        # dataframeに変換し、tableとして表示
+        # dataframeに変換し、キャッシュとして保存
         df = pd.DataFrame.from_dict(res["document_list"])
+        set_document_list(df)
+
+    if len(get_document_list()) > 0:
+        # ドキュメントリストが存在する場合は表として表示する
+        df = get_document_list()
         st.table(df)
 
-        # 指定したドキュメントを分析する
-        document_name = st.selectbox(
+        # 分析対象のドキュメントを指定する
+        company_info = str(st.selectbox(
             "分析したい決算資料を選択してください",
             [
                 item["filer_name"] + "_" + item["document_description"]
                 for _, item in df.iterrows()
             ]
-        )
+        ))
         analyze_btn = st.button("解析開始")
+
+        # debug
         logger.info("LLMの解析開始")
+
         if analyze_btn:
+            # 指定したドキュメントを分析する
+            backend_requester = BackendRequester()
+
             # ドキュメントをEDINETから、GCSにアップロードする
-            doc_id = df.query(f"filer_name == {document_name}").iloc[0]["doc_id"]
+            filer_name, document_description = company_info.split("_")
+            doc_id = df.query(
+                f'filer_name == "{filer_name}" & document_description == "{document_description}"'
+            ).iloc[0]["doc_id"]
 
             # debug
             logger.info(f"doc_id = {doc_id}")
@@ -190,6 +218,10 @@ def financial_report_analysis_widget():
 
             # 解析結果を出力する
             st.text(res["text"])
+
+
+def financial_report_analysis_component():
+    pass
 
 
 def main_page(placeholder):

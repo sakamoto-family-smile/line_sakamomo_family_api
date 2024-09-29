@@ -117,7 +117,7 @@ def analyze_financial_document(request: AnalyzeFinancialReportRequest):
         logger.error(e)
         raise HTTPException(status_code=500, detail="Internal Server Error. Analysis Financial Report process is failed.")
     return AnalyzeFinancialReportResponse(
-        text=res.deteil["reponse_text"],
+        text=res.deteil["response_text"],
         prompt=res.deteil["prompt"]
     )
 
