@@ -25,6 +25,11 @@ deploy_run:
 		--port ${WEB_PORT} \
 		--allow-unauthenticated
 
+all_process:
+	make build
+	make push_image
+	make deploy_run
+
 delete_run:
 	gcloud run services delete ${SERVICE_NAME} --region ${GOOGLE_REGION}
 

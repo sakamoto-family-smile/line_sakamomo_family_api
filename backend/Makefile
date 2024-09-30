@@ -37,6 +37,11 @@ deploy_public_api:
 		--port ${API_PORT} \
 		--allow-unauthenticated
 
+all_process:
+	make build
+	make push_image
+	make deploy_api
+
 delete_run:
 	gcloud run services delete ${SERVICE_NAME} --region ${GOOGLE_REGION}
 
