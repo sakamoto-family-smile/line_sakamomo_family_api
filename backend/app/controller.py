@@ -5,11 +5,12 @@ import os
 from uuid import uuid4
 from pydantic import BaseModel
 from datetime import datetime
+from io import BytesIO
 
 from .agent import MainAgent, MainAgentConfig, FinancialReportAgent, FinancialAgentConfig
 from .todo_util import TodoHandler
 from .edinet_wrapper import EdinetWrapper
-from .gcp_util import upload_file_into_gcs
+from .gcp_util import upload_file_into_gcs, download_file_from_gcs, split_bucket_name_and_file_path
 
 
 logger = getLogger(__name__)
@@ -20,7 +21,7 @@ logger.setLevel("DEBUG")
 class Response(BaseModel):
     request_id: str
     timestamp: datetime
-    deteil: dict
+    detail: dict
 
 
 class Controller:
@@ -92,7 +93,7 @@ class Controller:
         return Response(
             request_id=str(request_id),
             timestamp=current_time,
-            deteil={
+            detail={
                 "items": items
             }
         )
@@ -115,7 +116,7 @@ class Controller:
 
         return Response(request_id=str(request_id),
                         timestamp=current_time,
-                        deteil={
+                        detail={
                             "gcs_uri": gcs_uri
                         })
 
@@ -137,7 +138,32 @@ class Controller:
         agent_response = self.__financial_agent.get_llm_agent_response(input_data=input_data)
         return Response(request_id=request_id,
                         timestamp=current_time,
-                        deteil={
+                        detail={
                             "response_text": agent_response.text,
                             "prompt": prompt
+                        })
+
+    def downalod_financial_document(self, gcs_uri: str) -> Response:
+        request_id = str(uuid4())
+        current_time = datetime.now()
+
+        # pdfをGCSからダウンロードする
+        bucket_name, remote_file_path = split_bucket_name_and_file_path(gcs_uri=gcs_uri)
+        local_file_path = os.path.join(self.__output_folder, f"{request_id}.pdf")
+        download_file_from_gcs(
+            project_id=os.environ["GCP_PROJECT"],
+            bucket_name=bucket_name,
+            remote_file_path=remote_file_path,
+            local_file_path=local_file_path
+        )
+
+        # バイナリデータとして、返す
+        with open(local_file_path, "rb") as f:
+            byte_datas = BytesIO(f.read())
+
+        return Response(request_id=request_id,
+                        timestamp=current_time,
+                        detail={
+                            "document_data": byte_datas,
+                            "mime_type": "application/pdf"
                         })
