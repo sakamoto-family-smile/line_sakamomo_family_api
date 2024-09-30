@@ -179,14 +179,15 @@ class FinancialReportAgent(AbstractAgent):
 
     def get_llm_agent_response(self, input_data: dict) -> LLMAgentResponse:
         # gcs uriからpdfデータを取得
-        # TODO : part.from_uriだと、なぜかLLMがpdfデータを認識できないので、ローカルに落としてから、byte dataとしてLLMに渡す
         # TODO : 将来的に複数のデータタイプに対応させてもよさそう
         gcs_uri: str = input_data["gcs_uri"]
         prompt: str = input_data["prompt"]
         request_id: str = input_data["request_id"]
-        # file_data = Part.from_uri(uri=gcs_uri, mime_type="application/pdf")
+        file_data = Part.from_uri(uri=gcs_uri, mime_type="application/pdf")
 
         # GCSからローカルにpdfを落として、byte dataなfile dataに変換する
+        # uriからpdfが取れていれば、下記対応は不要
+        """
         local_file_path = os.path.join(self.__work_folder, f"{request_id}.pdf")
         remote_path_with_bucket_name = gcs_uri.replace("gs://", "")
         bucket_name, remote_path = remote_path_with_bucket_name.split("/", 1)
@@ -197,14 +198,10 @@ class FinancialReportAgent(AbstractAgent):
         with open(local_file_path, "rb") as f:
             byte_datas = BytesIO(f.read())
         file_data = Part.from_data(data=byte_datas.getvalue(), mime_type="application/pdf")
+        """
 
         # LLMを利用した解析処理を実施
         contents = [file_data, prompt]
-
-        # debug
-        for content in contents:
-            local_logger.info(f"agent log : content : {content}")
-
         response = self.__model.generate_content(contents=contents,
                                                  generation_config=self.__generation_config)
 
@@ -281,11 +278,6 @@ class FinancialReportAgent(AbstractAgent):
 
         # ログをGCSにアップロードする
         try:
-            #storage_client = storage.Client(project=os.environ["GCP_PROJECT"])
-            #datetime_str = timestamp.strftime("%Y%m%d%H%M%S")
-            #bucket = storage_client.bucket(self.__config.log_bucket_name)
-            #blob = bucket.blob(f"{self.__config.log_base_folder}/{datetime_str}/{request_id}/llm_log.json")
-            #blob.upload_from_filename(tmp_log_file, if_generation_match=0)
             datetime_str = timestamp.strftime("%Y%m%d%H%M%S")
             upload_file_into_gcs(
                 project_id=os.environ["GCP_PROJECT"],
@@ -294,7 +286,7 @@ class FinancialReportAgent(AbstractAgent):
                 local_file_path=tmp_log_file
             )
         except Exception as e:
-            print(e)
+            local_logger.error(e)
             raise Exception(e)
         finally:
             os.remove(tmp_log_file)

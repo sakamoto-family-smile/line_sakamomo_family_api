@@ -102,14 +102,9 @@ def analyze_pdf_by_vertexai(pdf_path: str, model_name: str, bucket_name: str, ou
     )
 
     pdf_file = Part.from_data(data=byte_datas.getvalue(), mime_type="application/pdf")
+    # pdf_file = Part.from_uri(uri="gs://sakamomo_family_api/document/20240930071845/ccbc9f9c-7e3a-4607-b746-6ef749fb9c1d/S100T80B.pdf", mime_type="application/pdf")
     contents = [pdf_file, prompt]
-
     response = model.generate_content(contents=contents, generation_config=config)
-
-    # debug
-    #print(response._raw_response.usage_metadata)
-    #for c in response.candidates:
-    #    print(c)
 
     # ログの作成をし、GCSにアップロードする
     # GCSのフォルダ階層は、<bucket_name>/<日付>/<uuid>とする
@@ -181,5 +176,5 @@ def main(pdf_path: str, analyze_type: int = 0, model_name: str = "gemini-1.5-fla
 
 
 if __name__ == "__main__":
-    pdf_path = os.path.join(os.path.dirname(__file__), "sample_data", "S100T80B.pdf")
+    pdf_path = os.path.join(os.path.dirname(__file__), "sample_data", "test.pdf")
     main(pdf_path=pdf_path, analyze_type=1, model_name=ModelType.GEMINI_1_5_FLASH.value)
