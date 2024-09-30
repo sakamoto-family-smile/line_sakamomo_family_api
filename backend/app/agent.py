@@ -1,12 +1,13 @@
 import os
 from datetime import datetime
 from logging import Logger, StreamHandler, getLogger
-from typing import List, Optional, Type
+from typing import List
+from abc import abstractmethod, ABC
+import json
+from collections.abc import Iterable
 
-import google.cloud.firestore
 import requests
 from langchain.agents import AgentType, initialize_agent, load_tools
-from langchain.callbacks.manager import AsyncCallbackManagerForToolRun, CallbackManagerForToolRun
 from langchain.memory import ConversationBufferMemory
 from langchain.tools.base import BaseTool
 from langchain_core.chat_history import BaseChatMessageHistory
@@ -15,7 +16,13 @@ from langchain_google_firestore import FirestoreChatMessageHistory
 from langchain_google_vertexai import VertexAI
 from pydantic import BaseModel
 
+import vertexai
+from vertexai.generative_models import GenerativeModel, Part, GenerationConfig, GenerationResponse
+from proto.marshal.collections import RepeatedComposite
+from io import BytesIO
+
 from .firebase_util import get_db_client_with_default_credentials
+from .gcp_util import upload_file_into_gcs, download_file_from_gcs
 
 local_logger = getLogger(__name__)
 local_logger.addHandler(StreamHandler())
@@ -32,11 +39,21 @@ class WeatherInfo(BaseModel):
 
 class LLMAgentResponse(BaseModel):
     text: str
+    metadata: dict
 
 
-class CustomAgentConfig(BaseModel):
+class MainAgentConfig(BaseModel):
     dialogue_session_id: str
     memory_store_type: str = "firestore"
+    debug_mode: bool = False
+
+
+class FinancialAgentConfig(BaseModel):
+    llm_model_name: str = "gemini-1.5-flash"
+    temperature: int = 0
+    log_bucket_name: str = "sakamomo_family_api"
+    log_base_folder: str = "log"
+    debug_mode: bool = False
 
 
 class AgentUtil:
@@ -64,14 +81,20 @@ class AgentUtil:
         return info
 
 
-class CustomAgent:
-    def __init__(self, agent_config: CustomAgentConfig, logger: Logger = None) -> None:
+class AbstractAgent(ABC):
+    @abstractmethod
+    def get_llm_agent_response(self, input_data: dict) -> LLMAgentResponse:
+        pass
+
+
+class MainAgent(AbstractAgent):
+    def __init__(self, agent_config: MainAgentConfig, logger: Logger = None) -> None:
         self.__agent_config = agent_config
         self.__logger = logger if logger is not None else local_logger
 
         # LLM Agentの作成
         llm = VertexAI(
-            model_name="gemini-1.5-pro-preview-0409",
+            model_name=os.environ.get("LLM_MODEL_NAME", "gemini-1.5-pro-preview-0409"),
             temperature=0.5,
             max_output_tokens=400,
             location=os.environ["GCP_LOCATION"],
@@ -92,6 +115,12 @@ class CustomAgent:
                 "collection": "HistoryMessages",
             },
         )
+
+        # デバッグ用に過去履歴のメッセージを出力する
+        if self.__agent_config.debug_mode:
+            for i, message in enumerate(memory.messages):
+                print(f"{i} : id={message.id}, name={message.name}, message={message.content}, add_kwargs={message.additional_kwargs}, metadata={message.response_metadata}")
+
         self.__agent_with_chat_history = RunnableWithMessageHistory(
             self.__agent,
             # This is needed because in most real world scenarios, a session id is needed
@@ -105,13 +134,13 @@ class CustomAgent:
         info = AgentUtil.get_weather_info(area_name=area_name)
         return info
 
-    def get_llm_agent_response(self, text: str) -> LLMAgentResponse:
+    def get_llm_agent_response(self, input_data: str) -> LLMAgentResponse:
         self.__logger.info("start get_llm_agent_response...")
         res = self.__agent_with_chat_history.invoke(
-            {"input": text},
+            {"input": input_data},
             config={"configurable": {"session_id": self.__agent_config.dialogue_session_id}},
         )
-        return LLMAgentResponse(text=res["output"])
+        return LLMAgentResponse(text=res["output"], metadata={})
 
     def get_chat_message_history(self, memory_type: str, config: dict) -> BaseChatMessageHistory:
         if memory_type == "local":
@@ -131,48 +160,133 @@ class CustomAgent:
         return tools
 
 
-class TodoRegisterInput(BaseModel):
-    target_date: datetime
-    content: str
+# TODO : request_idをcontroller側のみで意識できるようにログのアップロード周りはcontroller側で実施した方が良いかもしれない
+class FinancialReportAgent(AbstractAgent):
+    def __init__(self, config: FinancialAgentConfig) -> None:
+        super().__init__()
 
+        vertexai.init(
+            project=os.environ["GCP_PROJECT"],
+            location=os.environ["GCP_LOCATION"]
+        )
+        self.__model = GenerativeModel(model_name=config.llm_model_name)
+        self.__config = config
+        self.__generation_config = GenerationConfig(
+            temperature=config.temperature
+        )
+        self.__work_folder = os.path.join(os.path.dirname(__file__), "work")
+        os.makedirs(self.__work_folder, exist_ok=True)
 
-# TODO : 動かないので修正が必要
-class TodoRegisterTool(BaseTool):
-    name = "todo_register"
-    description = "useful for when you need to register the task or todo."
-    args_schema: Type[BaseModel] = TodoRegisterInput
-    db: google.cloud.firestore.Client = None
-    collection_id: str = "ToDoHistory"
-    document_id: str = None
-    logger = local_logger
+    def get_llm_agent_response(self, input_data: dict) -> LLMAgentResponse:
+        # gcs uriからpdfデータを取得
+        # TODO : 将来的に複数のデータタイプに対応させてもよさそう
+        gcs_uri: str = input_data["gcs_uri"]
+        prompt: str = input_data["prompt"]
+        request_id: str = input_data["request_id"]
+        file_data = Part.from_uri(uri=gcs_uri, mime_type="application/pdf")
 
-    def __init__(self, /, **data) -> None:
-        super().__init__(**data)
-        self.db = get_db_client_with_default_credentials()
-        self.collection_id = "ToDoHistory"
-        self.document_id = data["document_id"]
-        self.logger = data["logger"] if "logger" in data else local_logger
+        # GCSからローカルにpdfを落として、byte dataなfile dataに変換する
+        # uriからpdfが取れていれば、下記対応は不要
+        """
+        local_file_path = os.path.join(self.__work_folder, f"{request_id}.pdf")
+        remote_path_with_bucket_name = gcs_uri.replace("gs://", "")
+        bucket_name, remote_path = remote_path_with_bucket_name.split("/", 1)
+        download_file_from_gcs(project_id=os.environ["GCP_PROJECT"],
+                               bucket_name=bucket_name,
+                               remote_file_path=remote_path,
+                               local_file_path=local_file_path)
+        with open(local_file_path, "rb") as f:
+            byte_datas = BytesIO(f.read())
+        file_data = Part.from_data(data=byte_datas.getvalue(), mime_type="application/pdf")
+        """
 
-    def _run(
-        self,
-        target_date: datetime,
-        content: str,
-        run_manager: Optional[CallbackManagerForToolRun] = None,
-    ) -> str:
-        self.logger.info(f"start to register the todo. date is {target_date}, todo content is {content}")
+        # LLMを利用した解析処理を実施
+        contents = [file_data, prompt]
+        response = self.__model.generate_content(contents=contents,
+                                                 generation_config=self.__generation_config)
+
+        # 解析結果含めて、ログとして出力
+        self.__upload_llm_log(response=response,
+                              request_id=request_id,
+                              prompt=prompt,
+                              timestamp=input_data["timestamp"],
+                              gcs_uri=gcs_uri)
+
+        # 解析結果を返す
+        return LLMAgentResponse(text=response.text, metadata={})
+
+    # TODO : リファクタリングする（内部関数とかをutilとかに切り出す）
+    def __upload_llm_log(self,
+                         response: GenerationResponse | Iterable[GenerationResponse],
+                         request_id: str,
+                         prompt: str,
+                         timestamp: datetime,
+                         gcs_uri: str):
+        # citation_metadataオブジェクトをリストに変換する
+        def repeated_citations_to_list(citations: RepeatedComposite) -> list:
+            citation_li = []
+            for citation in citations:
+                citation_dict = {}
+                citation_dict["startIndex"] = citation.startIndex
+                citation_dict["endIndex"] = citation.endIndex
+                citation_dict["uri"] = citation.uri
+                citation_dict["title"] = citation.title
+                citation_dict["license"] = citation.license
+                citation_dict["publicationDate"] = citation.publicationDate
+                citation_li.append(citation_dict)
+            return citation_li
+
+        # safety_ratingsオブジェクトをリストに変換する
+        def repeated_safety_ratings_to_list(safety_ratings: RepeatedComposite) -> list:
+            safety_rating_li = []
+            for safety_rating in safety_ratings:
+                safety_rating_dict = {}
+                safety_rating_dict["category"] = safety_rating.category.name
+                safety_rating_dict["probability"] = safety_rating.probability.name
+                safety_rating_li.append(safety_rating_dict)
+            return safety_rating_li
+
+        # llmのログをローカルに生成
+        llm_log_data = {
+            "input": {
+                "input_datas": [],
+                "prompt": prompt,
+                "model_name": self.__config.llm_model_name,
+                "llm_config": {
+                    "temperature": self.__config.temperature
+                },
+                "prompt_token_count": response._raw_response.usage_metadata.prompt_token_count,
+                "gcs_uri": gcs_uri
+            },
+            "output": {
+                "text": response.candidates[0].text,
+                "finish_reason": response.candidates[0].finish_reason.name,
+                "finish_message": response.candidates[0].finish_message,
+                "safety_ratings": repeated_safety_ratings_to_list(response.candidates[0].safety_ratings),
+                "citation_metadata": repeated_citations_to_list(response.candidates[0].citation_metadata.citations),
+                "candidates_token_count": response._raw_response.usage_metadata.candidates_token_count,
+                "total_token_count": response._raw_response.usage_metadata.total_token_count
+            },
+            "meta": {
+                "timestamp": timestamp.strftime("%Y%m%d%H%M%S"),
+                "request_id": request_id
+            }
+        }
+        tmp_log_file = os.path.join(self.__work_folder, "tmp_log.json")
+        with open(tmp_log_file, "w") as f:
+            json.dump(llm_log_data, f, ensure_ascii=False)
+
+        # ログをGCSにアップロードする
         try:
-            data = {"date": target_date, "todo": content}
-            self.db.collection(self.collection_id).document(self.document_id).set(data)
+            datetime_str = timestamp.strftime("%Y%m%d%H%M%S")
+            upload_file_into_gcs(
+                project_id=os.environ["GCP_PROJECT"],
+                bucket_name=self.__config.log_bucket_name,
+                remote_file_path=f"{self.__config.log_base_folder}/{datetime_str}/{request_id}/llm_log.json",
+                local_file_path=tmp_log_file
+            )
         except Exception as e:
-            self.logger.error(e)
-            return "error is occured!"
-        return "LangChain"
-
-    async def _arun(
-        self,
-        target_date: datetime,
-        content: str,
-        run_manager: Optional[AsyncCallbackManagerForToolRun] = None,
-    ) -> str:
-        """Use the tool asynchronously."""
-        raise NotImplementedError("custom_search does not support async")
+            local_logger.error(e)
+            raise Exception(e)
+        finally:
+            os.remove(tmp_log_file)

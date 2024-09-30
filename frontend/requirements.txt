@@ -1,3 +1,4 @@
 Pyrebase4
 streamlit
 google-auth
+pandas

@@ -12,3 +12,8 @@ langchain-google-memorystore-redis
 langchain-google-firestore
 firebase_admin
 pysen[lint]
+google-cloud-bigquery
+google-generativeai
+google-cloud-storage
+PyPDF2
+pandas
