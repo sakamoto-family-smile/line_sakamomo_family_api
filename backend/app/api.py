@@ -31,6 +31,7 @@ class FinancialDocumentData(BaseModel):
 
 class FinancialDocumentListResponse(BaseModel):
     status: int
+    request_id: str
     document_list: List[FinancialDocumentData]
 
 
@@ -41,6 +42,7 @@ class AnalyzeFinancialReportRequest(BaseModel):
 
 
 class AnalyzeFinancialReportResponse(BaseModel):
+    request_id: str
     text: str
     prompt: str
 
@@ -50,6 +52,7 @@ class UploadFinancialReportRequest(BaseModel):
 
 
 class UploadFinancialReportResponse(BaseModel):
+    request_id: str
     gcs_uri: str
 
 
@@ -99,7 +102,9 @@ def financial_document_list(request: FinancialDocumentListRequest):
     except Exception as e:
         logger.error(e)
         raise HTTPException(status_code=500, detail="Internal Server Error. Search financial report process is failed.")
-    return FinancialDocumentListResponse(status=0, document_list=document_list)
+    return FinancialDocumentListResponse(
+        status=0, document_list=document_list, request_id=res.request_id
+    )
 
 
 @app.post("/analyze_financial_document")
@@ -118,7 +123,8 @@ def analyze_financial_document(request: AnalyzeFinancialReportRequest):
         raise HTTPException(status_code=500, detail="Internal Server Error. Analysis Financial Report process is failed.")
     return AnalyzeFinancialReportResponse(
         text=res.deteil["response_text"],
-        prompt=res.deteil["prompt"]
+        prompt=res.deteil["prompt"],
+        request_id=res.request_id
     )
 
 
@@ -130,4 +136,7 @@ def upload_financial_report(request: UploadFinancialReportRequest):
     except Exception as e:
         logger.error(e)
         raise HTTPException(status_code=500, detail="Internal Server Error. Upload Financial Report Process is failed.")
-    return UploadFinancialReportResponse(gcs_uri=res.deteil["gcs_uri"])
+    return UploadFinancialReportResponse(
+        gcs_uri=res.deteil["gcs_uri"],
+        request_id=res.request_id
+    )

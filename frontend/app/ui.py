@@ -199,19 +199,18 @@ def financial_report_analysis_widget():
             # 対象となる決算資料を分析する
             gcs_uri = res["gcs_uri"]
             st.text(f"gcs uri : {gcs_uri}")
-            res = backend_requester.request_analyze_financial_document(
-                token=st.session_state[TOKEN_KEY],
-                analysis_type=0,
-                gcs_uri=gcs_uri,
-                message=""
-            )
+            with st.spinner("please wait to analyze the financial report.."):
+                res = backend_requester.request_analyze_financial_document(
+                    token=st.session_state[TOKEN_KEY],
+                    analysis_type=0,
+                    gcs_uri=gcs_uri,
+                    message=""
+                )
 
             # 解析結果を出力する
+            request_id = res["request_id"]
+            st.text(f"Request ID : {request_id}")
             st.text(res["text"])
-
-
-def financial_report_analysis_component():
-    pass
 
 
 def main_page(placeholder):
