@@ -1,6 +1,7 @@
 import os
 import json
 import requests
+from requests import Response
 
 
 class BackendRequester:
@@ -28,7 +29,7 @@ class BackendRequester:
             data={
                 "message": text
             }
-        )
+        ).json()
 
     def request_financial_document_list(self, token: str, company_name: str) -> dict:
         return self.request_api(
@@ -37,7 +38,7 @@ class BackendRequester:
             data={
                 "company_name": company_name
             }
-        )
+        ).json()
 
     def request_upload_financial_report(self, token: str, doc_id: str) -> dict:
         return self.request_api(
@@ -46,7 +47,7 @@ class BackendRequester:
             data={
                 "doc_id": doc_id
             }
-        )
+        ).json()
 
     def request_analyze_financial_document(self, token: str, analysis_type: int, gcs_uri: str, message: str) -> dict:
         return self.request_api(
@@ -57,9 +58,18 @@ class BackendRequester:
                 "gcs_uri": gcs_uri,
                 "message": message
             }
-        )
+        ).json()
 
-    def request_api(self, token: str, request_name: str, data: dict) -> dict:
+    def request_download_financial_document(self, token: str, gcs_uri: str) -> bytes:
+        return self.request_api(
+            token=token,
+            request_name="download_financial_document",
+            data={
+                "gcs_uri": gcs_uri
+            }
+        ).content
+
+    def request_api(self, token: str, request_name: str, data: dict) -> Response:
         url = f"{self.__backend_url}/{request_name}"
         resp = requests.request(
             "POST", url,
@@ -74,4 +84,4 @@ class BackendRequester:
                 'Bad response from application: {!r} / {!r} / {!r}'.format(
                     resp.status_code, resp.headers, resp.text))
         else:
-            return resp.json()
+            return resp

@@ -154,6 +154,7 @@ def download_financial_document(request: DownloadFinancialReportRequest):
     except Exception as e:
         logger.error(e)
         raise HTTPException(status_code=500, detail="Internal Server Error. Download Financial Report Process is failed.")
+    # TODO : FileResponseを使うと楽かも
     return fastapi.responses.Response(
         content=res.detail["document_data"],
         media_type=res.detail["mime_type"],
