@@ -26,3 +26,7 @@ def download_file_from_gcs(project_id: str,
 def split_bucket_name_and_file_path(gcs_uri: str) -> List[str]:
     uri = gcs_uri.replace("gs://", "")
     return uri.split("/", 1)
+
+
+def get_filename_from_gcs_uri(gcs_uri: str) -> str:
+    return gcs_uri.split("/")[-1]

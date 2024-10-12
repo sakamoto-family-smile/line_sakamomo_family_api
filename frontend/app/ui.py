@@ -181,6 +181,8 @@ def financial_report_analysis_widget():
                 for _, item in df.iterrows()
             ]
         ))
+
+        # 解析ボタンの表示
         analyze_btn = st.button("解析開始")
         if analyze_btn:
             # 指定したドキュメントを分析する
@@ -211,6 +213,15 @@ def financial_report_analysis_widget():
             request_id = res["request_id"]
             st.text(f"Request ID : {request_id}")
             st.text(res["text"])
+
+            # ドキュメントをダウンロードする
+            # TODO : 階層が深いので、リファクタリングするか・関数として切り出す
+            # TODO : LLMの実行をしなくても、ダウンロードできるようにしたい
+            # TODO : imp
+            download_btn = st.button("ダウンロード")
+            if download_btn:
+                res = backend_requester.request_download_financial_document(token=st.session_state[TOKEN_KEY], gcs_uri=gcs_uri)
+                st.write(res)
 
 
 def main_page(placeholder):

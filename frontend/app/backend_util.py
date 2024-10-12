@@ -61,12 +61,13 @@ class BackendRequester:
         ).json()
 
     def request_download_financial_document(self, token: str, gcs_uri: str) -> bytes:
-        return self.request_api(
+        return self.request_get(
             token=token,
             request_name="download_financial_document",
             data={
                 "gcs_uri": gcs_uri
-            }
+            },
+            mime_type="application/json"
         ).content
 
     def request_api(self, token: str, request_name: str, data: dict) -> Response:
@@ -76,6 +77,23 @@ class BackendRequester:
             data=json.dumps(data),
             headers={
                 "Content-Type": "application/json",
+                'Authorization': 'Bearer {}'.format(token)
+            }
+        )
+        if resp.status_code != 200:
+            raise Exception(
+                'Bad response from application: {!r} / {!r} / {!r}'.format(
+                    resp.status_code, resp.headers, resp.text))
+        else:
+            return resp
+
+    def request_get(self, token: str, request_name: str, mime_type: str, data: dict) -> Response:
+        url = f"{self.__backend_url}/{request_name}"
+        resp = requests.request(
+            "GET", url,
+            data=json.dumps(data),
+            headers={
+                "Content-Type": mime_type,
                 'Authorization': 'Bearer {}'.format(token)
             }
         )

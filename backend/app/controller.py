@@ -10,7 +10,7 @@ from io import BytesIO
 from .agent import MainAgent, MainAgentConfig, FinancialReportAgent, FinancialAgentConfig
 from .todo_util import TodoHandler
 from .edinet_wrapper import EdinetWrapper
-from .gcp_util import upload_file_into_gcs, download_file_from_gcs, split_bucket_name_and_file_path
+from .gcp_util import upload_file_into_gcs, download_file_from_gcs, split_bucket_name_and_file_path, get_filename_from_gcs_uri
 
 
 logger = getLogger(__name__)
@@ -149,7 +149,8 @@ class Controller:
 
         # pdfをGCSからダウンロードする
         bucket_name, remote_file_path = split_bucket_name_and_file_path(gcs_uri=gcs_uri)
-        local_file_path = os.path.join(self.__output_folder, f"{request_id}.pdf")
+        filename = get_filename_from_gcs_uri(gcs_uri=gcs_uri)
+        local_file_path = os.path.join(self.__output_folder, f"{request_id}_{filename}.pdf")
         download_file_from_gcs(
             project_id=os.environ["GCP_PROJECT"],
             bucket_name=bucket_name,
@@ -158,12 +159,12 @@ class Controller:
         )
 
         # バイナリデータとして、返す
-        with open(local_file_path, "rb") as f:
-            byte_datas = BytesIO(f.read())
+        # with open(local_file_path, "rb") as f:
+        #     byte_datas = BytesIO(f.read())
 
         return Response(request_id=request_id,
                         timestamp=current_time,
                         detail={
-                            "document_data": byte_datas,
+                            "document_path": local_file_path,
                             "mime_type": "application/pdf"
                         })

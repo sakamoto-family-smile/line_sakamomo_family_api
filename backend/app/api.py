@@ -1,7 +1,7 @@
 from logging import StreamHandler, getLogger
 
 from fastapi import FastAPI
-import fastapi.responses
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from starlette.exceptions import HTTPException
 from typing import List
@@ -147,7 +147,7 @@ def upload_financial_report(request: UploadFinancialReportRequest):
     )
 
 
-@app.post("/download_financial_document")
+@app.get("/download_financial_document")
 def download_financial_document(request: DownloadFinancialReportRequest):
     try:
         res = controller.downalod_financial_document(gcs_uri=request.gcs_uri)
@@ -155,8 +155,13 @@ def download_financial_document(request: DownloadFinancialReportRequest):
         logger.error(e)
         raise HTTPException(status_code=500, detail="Internal Server Error. Download Financial Report Process is failed.")
     # TODO : FileResponseを使うと楽かも
-    return fastapi.responses.Response(
-        content=res.detail["document_data"],
+    # return fastapi.responses.Response(
+    #     content=res.detail["document_data"],
+    #     media_type=res.detail["mime_type"],
+    #     status_code=200
+    # )
+    return FileResponse(
+        path=res.detail["document_path"],
         media_type=res.detail["mime_type"],
         status_code=200
     )
