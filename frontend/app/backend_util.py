@@ -91,9 +91,8 @@ class BackendRequester:
         url = f"{self.__backend_url}/{request_name}"
         resp = requests.request(
             "GET", url,
-            data=json.dumps(data),
+            params=data,
             headers={
-                "Content-Type": mime_type,
                 'Authorization': 'Bearer {}'.format(token)
             }
         )

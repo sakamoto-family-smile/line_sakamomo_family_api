@@ -148,9 +148,9 @@ def upload_financial_report(request: UploadFinancialReportRequest):
 
 
 @app.get("/download_financial_document")
-def download_financial_document(request: DownloadFinancialReportRequest):
+def download_financial_document(gcs_uri: str):
     try:
-        res = controller.downalod_financial_document(gcs_uri=request.gcs_uri)
+        res = controller.downalod_financial_document(gcs_uri=gcs_uri)
     except Exception as e:
         logger.error(e)
         raise HTTPException(status_code=500, detail="Internal Server Error. Download Financial Report Process is failed.")
