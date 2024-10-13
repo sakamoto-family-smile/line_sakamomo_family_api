@@ -1,6 +1,7 @@
 from logging import StreamHandler, getLogger
 
 from fastapi import FastAPI
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from starlette.exceptions import HTTPException
 from typing import List
@@ -56,6 +57,10 @@ class UploadFinancialReportResponse(BaseModel):
     gcs_uri: str
 
 
+class DownloadFinancialReportRequest(BaseModel):
+    gcs_uri: str
+
+
 class FinancialReportAnalysisType(Enum):
     DEFAULT = 0
     QA = 1
@@ -97,7 +102,7 @@ def financial_document_list(request: FinancialDocumentListRequest):
                 filer_name=item["filer_name"],
                 document_description=item["doc_description"]
             )
-            for item in res.deteil["items"]
+            for item in res.detail["items"]
         ]
     except Exception as e:
         logger.error(e)
@@ -122,8 +127,8 @@ def analyze_financial_document(request: AnalyzeFinancialReportRequest):
         logger.error(e)
         raise HTTPException(status_code=500, detail="Internal Server Error. Analysis Financial Report process is failed.")
     return AnalyzeFinancialReportResponse(
-        text=res.deteil["response_text"],
-        prompt=res.deteil["prompt"],
+        text=res.detail["response_text"],
+        prompt=res.detail["prompt"],
         request_id=res.request_id
     )
 
@@ -137,6 +142,26 @@ def upload_financial_report(request: UploadFinancialReportRequest):
         logger.error(e)
         raise HTTPException(status_code=500, detail="Internal Server Error. Upload Financial Report Process is failed.")
     return UploadFinancialReportResponse(
-        gcs_uri=res.deteil["gcs_uri"],
+        gcs_uri=res.detail["gcs_uri"],
         request_id=res.request_id
+    )
+
+
+@app.get("/download_financial_document")
+def download_financial_document(gcs_uri: str):
+    try:
+        res = controller.downalod_financial_document(gcs_uri=gcs_uri)
+    except Exception as e:
+        logger.error(e)
+        raise HTTPException(status_code=500, detail="Internal Server Error. Download Financial Report Process is failed.")
+    # TODO : FileResponseを使うと楽かも
+    # return fastapi.responses.Response(
+    #     content=res.detail["document_data"],
+    #     media_type=res.detail["mime_type"],
+    #     status_code=200
+    # )
+    return FileResponse(
+        path=res.detail["document_path"],
+        media_type=res.detail["mime_type"],
+        status_code=200
     )

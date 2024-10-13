@@ -5,12 +5,15 @@ from logging import StreamHandler, getLogger
 from login import LoginHelper
 from backend_util import BackendRequester
 import pandas as pd
+import os
 
 
 # グローバル変数
 TOKEN_KEY = "authenticated"
 CHAT_HISTORY = "CHAT_MESSAGES"
 DOCUMENT_LIST_KEY = "document_list"
+DOWNLOAD_FILE_KEY = "download_file"
+OUTPUT_FOLDER = os.path.join(os.path.dirname(__file__), "output")
 
 
 # Loggerの設定
@@ -27,6 +30,20 @@ class ChatMessage:
 
 def check_auth_key() -> bool:
     return TOKEN_KEY in st.session_state and st.session_state[TOKEN_KEY]
+
+
+def set_download_file(filename: str, file_data: bytes):
+    st.session_state[DOWNLOAD_FILE_KEY] = {
+        "filename": filename,
+        "file_data": file_data
+    }
+
+
+def get_download_file() -> tuple:
+    return (
+        st.session_state[DOWNLOAD_FILE_KEY]["filename"],
+        st.session_state[DOWNLOAD_FILE_KEY]["file_data"]
+    )
 
 
 def login_page(placeholder):
@@ -181,6 +198,8 @@ def financial_report_analysis_widget():
                 for _, item in df.iterrows()
             ]
         ))
+
+        # 解析ボタンの表示
         analyze_btn = st.button("解析開始")
         if analyze_btn:
             # 指定したドキュメントを分析する
@@ -212,6 +231,29 @@ def financial_report_analysis_widget():
             st.text(f"Request ID : {request_id}")
             st.text(res["text"])
 
+            # ドキュメントをダウンロードする
+            # TODO : 階層が深いので、リファクタリングするか・関数として切り出す
+            # TODO : LLMの実行をしなくても、ダウンロードできるようにしたい（ダウンロードボタンを作りたい）
+            res = backend_requester.request_download_financial_document(
+                token=st.session_state[TOKEN_KEY],
+                gcs_uri=gcs_uri
+            )
+            filename = gcs_uri.split("/")[-1]
+            file_path = os.path.join(OUTPUT_FOLDER, filename)
+            with open(file_path, "wb") as f:
+                f.write(res)
+            set_download_file(filename=filename, file_data=res)
+
+        # ダウンロードボタンを配置する
+        if DOWNLOAD_FILE_KEY in st.session_state:
+            filename, file_data = get_download_file()
+            _ = st.download_button(
+                label="PDFのダウンロード",
+                data=file_data,
+                file_name=filename,
+                mime="application/pdf"
+            )
+
 
 def main_page(placeholder):
     chat_tab, financial_report_analysis_tab = st.tabs(["チャット", "決算書分析"])
@@ -229,6 +271,7 @@ def main():
                        layout='wide',
                        initial_sidebar_state="collapsed")
     placeholder = st.empty()
+    os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
     # 認証済みの場合は、メインページへ
     if check_auth_key():
