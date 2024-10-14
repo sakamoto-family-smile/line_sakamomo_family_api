@@ -17,7 +17,7 @@ from langchain_google_vertexai import VertexAI
 from pydantic import BaseModel
 
 import vertexai
-from vertexai.generative_models import GenerativeModel, Part, GenerationConfig, GenerationResponse
+from vertexai.generative_models import GenerativeModel, Part, GenerationConfig, GenerationResponse, SafetySetting
 from proto.marshal.collections import RepeatedComposite
 from io import BytesIO
 
@@ -172,8 +172,28 @@ class FinancialReportAgent(AbstractAgent):
         self.__model = GenerativeModel(model_name=config.llm_model_name)
         self.__config = config
         self.__generation_config = GenerationConfig(
-            temperature=config.temperature
+            temperature=config.temperature,
+            max_output_tokens=8192,
+            top_p=0.95
         )
+        self.__safety_settings = [
+            SafetySetting(
+                category=SafetySetting.HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+                threshold=SafetySetting.HarmBlockThreshold.OFF
+            ),
+            SafetySetting(
+                category=SafetySetting.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+                threshold=SafetySetting.HarmBlockThreshold.OFF
+            ),
+            SafetySetting(
+                category=SafetySetting.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+                threshold=SafetySetting.HarmBlockThreshold.OFF
+            ),
+            SafetySetting(
+                category=SafetySetting.HarmCategory.HARM_CATEGORY_HARASSMENT,
+                threshold=SafetySetting.HarmBlockThreshold.OFF
+            ),
+        ]
         self.__work_folder = os.path.join(os.path.dirname(__file__), "work")
         os.makedirs(self.__work_folder, exist_ok=True)
 
