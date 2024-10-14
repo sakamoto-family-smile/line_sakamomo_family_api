@@ -47,7 +47,9 @@ class Controller:
         )
 
         # 決算書を分析するためのAgentを初期化
-        self.__financial_agent_config = FinancialAgentConfig()
+        self.__financial_agent_config = FinancialAgentConfig(
+            llm_model_name="gemini-1.5-flash-001"
+        )
         self.__financial_agent = FinancialReportAgent(config=self.__financial_agent_config)
 
     # TODO : 内部で例外が発生した際は例外を返すようにした方がよさそう.
@@ -126,7 +128,17 @@ class Controller:
 
         # pdfをLLMに送って、解析させる(CustomAgentか新規のAgentを用いる)
         default_prompt = """
-        下記に含まれる財務三表の内容を踏まえて、企業の分析を行なってください。
+上記の決算資料から、後述する観点について分析を行い、下記の内容について回答してください。
+
+## 回答して欲しい内容
+
+・財務三表（損益計算書、貸借対照表、キャッシュフロー表）について、分析を行ってください。
+・今後3ヵ年で企業の収益性は良くなっていくでしょうか？その理由も述べてください。
+・直近1年で企業の株価は上昇していくでしょうか？その理由も述べてください。
+
+## 分析時の観点
+
+・貸借対照表、損益計算書、キャッシュフロー表が記載されている場合、各データについて、詳細な分析をすること
         """
         prompt = message if message is not None else default_prompt
         input_data = {
