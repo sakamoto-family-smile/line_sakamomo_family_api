@@ -1,8 +1,9 @@
-import streamlit as st
-import pyrebase.pyrebase
-import os
-import json
 import dataclasses
+import json
+import os
+
+import pyrebase.pyrebase
+import streamlit as st
 
 
 @dataclasses.dataclass

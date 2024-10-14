@@ -1,17 +1,22 @@
-from logging import StreamHandler, getLogger
-from typing import List
-from google.cloud import bigquery
 import os
-from uuid import uuid4
-from pydantic import BaseModel
 from datetime import datetime
 from io import BytesIO
+from logging import StreamHandler, getLogger
+from typing import List
+from uuid import uuid4
 
-from .agent import MainAgent, MainAgentConfig, FinancialReportAgent, FinancialAgentConfig
-from .todo_util import TodoHandler
+from google.cloud import bigquery
+from pydantic import BaseModel
+
+from .agent import FinancialAgentConfig, FinancialReportAgent, MainAgent, MainAgentConfig
 from .edinet_wrapper import EdinetWrapper
-from .gcp_util import upload_file_into_gcs, download_file_from_gcs, split_bucket_name_and_file_path, get_filename_from_gcs_uri
-
+from .gcp_util import (
+    download_file_from_gcs,
+    get_filename_from_gcs_uri,
+    split_bucket_name_and_file_path,
+    upload_file_into_gcs,
+)
+from .todo_util import TodoHandler
 
 logger = getLogger(__name__)
 logger.addHandler(StreamHandler())
@@ -27,29 +32,19 @@ class Response(BaseModel):
 class Controller:
     def __init__(self, dialogue_session_id: str) -> None:
         # MainAgentの初期化
-        agent_config = MainAgentConfig(
-            dialogue_session_id=dialogue_session_id,
-            memory_store_type="firestore"
-        )
+        agent_config = MainAgentConfig(dialogue_session_id=dialogue_session_id, memory_store_type="firestore")
         self.__agent = MainAgent(agent_config=agent_config)
         self.__todo_handler = TodoHandler(
-            family_id=agent_config.dialogue_session_id,
-            collection_id="ToDoHistory",
-            custom_logger=logger
+            family_id=agent_config.dialogue_session_id, collection_id="ToDoHistory", custom_logger=logger
         )
 
         # Edinetを利用するためのラッパークラスを初期化
         self.__output_folder = os.path.join(os.path.dirname(__file__), "output")
         os.makedirs(self.__output_folder, exist_ok=True)
-        self.__edinet_wrapper = EdinetWrapper(
-            api_key=os.environ["EDINET_API_KEY"],
-            output_folder=self.__output_folder
-        )
+        self.__edinet_wrapper = EdinetWrapper(api_key=os.environ["EDINET_API_KEY"], output_folder=self.__output_folder)
 
         # 決算書を分析するためのAgentを初期化
-        self.__financial_agent_config = FinancialAgentConfig(
-            llm_model_name="gemini-1.5-flash-001"
-        )
+        self.__financial_agent_config = FinancialAgentConfig(llm_model_name="gemini-1.5-flash-001")
         self.__financial_agent = FinancialReportAgent(config=self.__financial_agent_config)
 
     # TODO : 内部で例外が発生した際は例外を返すようにした方がよさそう.
@@ -88,17 +83,11 @@ class Controller:
                     "doc_id": doc_id,
                     "filer_name": row["filerName"],
                     "doc_description": row["docDescription"],
-                    "doc_url": f"{self.__edinet_wrapper.get_document_url(doc_id=doc_id)}"
+                    "doc_url": f"{self.__edinet_wrapper.get_document_url(doc_id=doc_id)}",
                 }
                 items.append(item)
 
-        return Response(
-            request_id=str(request_id),
-            timestamp=current_time,
-            detail={
-                "items": items
-            }
-        )
+        return Response(request_id=str(request_id), timestamp=current_time, detail={"items": items})
 
     def upload_financial_report_into_gcs(self, doc_id: str) -> Response:
         request_id = uuid4()
@@ -111,16 +100,14 @@ class Controller:
         file_name = os.path.basename(file_path)
         current_time_str = current_time.strftime("%Y%m%d%H%M%S")
         gcs_file_path = f"document/{current_time_str}/{request_id}/{file_name}"
-        gcs_uri = upload_file_into_gcs(project_id=os.environ["GCP_PROJECT"],
-                             bucket_name=self.__financial_agent_config.log_bucket_name,
-                             remote_file_path=gcs_file_path,
-                             local_file_path=file_path)
+        gcs_uri = upload_file_into_gcs(
+            project_id=os.environ["GCP_PROJECT"],
+            bucket_name=self.__financial_agent_config.log_bucket_name,
+            remote_file_path=gcs_file_path,
+            local_file_path=file_path,
+        )
 
-        return Response(request_id=str(request_id),
-                        timestamp=current_time,
-                        detail={
-                            "gcs_uri": gcs_uri
-                        })
+        return Response(request_id=str(request_id), timestamp=current_time, detail={"gcs_uri": gcs_uri})
 
     def analyze_financial_document(self, gcs_uri: str, message: str | None = None) -> Response:
         request_id = str(uuid4())
@@ -141,19 +128,13 @@ class Controller:
 ・貸借対照表、損益計算書、キャッシュフロー表が記載されている場合、各データについて、詳細な分析をすること
         """
         prompt = message if message is not None else default_prompt
-        input_data = {
-            "request_id": request_id,
-            "gcs_uri": gcs_uri,
-            "prompt": prompt,
-            "timestamp": current_time
-        }
+        input_data = {"request_id": request_id, "gcs_uri": gcs_uri, "prompt": prompt, "timestamp": current_time}
         agent_response = self.__financial_agent.get_llm_agent_response(input_data=input_data)
-        return Response(request_id=request_id,
-                        timestamp=current_time,
-                        detail={
-                            "response_text": agent_response.text,
-                            "prompt": prompt
-                        })
+        return Response(
+            request_id=request_id,
+            timestamp=current_time,
+            detail={"response_text": agent_response.text, "prompt": prompt},
+        )
 
     def downalod_financial_document(self, gcs_uri: str) -> Response:
         request_id = str(uuid4())
@@ -167,16 +148,15 @@ class Controller:
             project_id=os.environ["GCP_PROJECT"],
             bucket_name=bucket_name,
             remote_file_path=remote_file_path,
-            local_file_path=local_file_path
+            local_file_path=local_file_path,
         )
 
         # バイナリデータとして、返す
         # with open(local_file_path, "rb") as f:
         #     byte_datas = BytesIO(f.read())
 
-        return Response(request_id=request_id,
-                        timestamp=current_time,
-                        detail={
-                            "document_path": local_file_path,
-                            "mime_type": "application/pdf"
-                        })
+        return Response(
+            request_id=request_id,
+            timestamp=current_time,
+            detail={"document_path": local_file_path, "mime_type": "application/pdf"},
+        )

@@ -4,13 +4,14 @@ EDINETから有価証券報告書を取得するためのラッパークラス
 https://disclosure2dl.edinet-fsa.go.jp/guide/static/disclosure/WZEK0110.html
 """
 
-import requests
-import pandas as pd
-from datetime import datetime, timedelta
-from copy import deepcopy
-import urllib.request
-import sys
 import os
+import sys
+import urllib.request
+from copy import deepcopy
+from datetime import datetime, timedelta
+
+import pandas as pd
+import requests
 
 
 class DownloadResult:
@@ -67,18 +68,22 @@ class GetDocumentListResult:
 class EdinetWrapper:
     def __init__(self, api_key: str, output_folder: str = None) -> None:
         self.__api_key = api_key
-        self.__output_folder = os.path.join(os.path.dirname(__file__), "output", datetime.now().strftime("%Y%m%d%H%M%S")) if output_folder is None else output_folder
+        self.__output_folder = (
+            os.path.join(os.path.dirname(__file__), "output", datetime.now().strftime("%Y%m%d%H%M%S"))
+            if output_folder is None
+            else output_folder
+        )
         os.makedirs(self.__output_folder, exist_ok=True)
 
     def get_document_url(self, doc_id: str) -> str:
-        return f'https://api.edinet-fsa.go.jp/api/v2/documents/{doc_id}'
+        return f"https://api.edinet-fsa.go.jp/api/v2/documents/{doc_id}"
 
     def get_documents_info_dataframe(self, target_date: datetime) -> pd.DataFrame:
-        url = 'https://disclosure.edinet-fsa.go.jp/api/v2/documents.json'
+        url = "https://disclosure.edinet-fsa.go.jp/api/v2/documents.json"
         params = {
-            'date': target_date.strftime("%Y-%m-%d"),
-            'type': 2,  # 2は有価証券報告書などの決算書類
-            "Subscription-Key": self.__api_key
+            "date": target_date.strftime("%Y-%m-%d"),
+            "type": 2,  # 2は有価証券報告書などの決算書類
+            "Subscription-Key": self.__api_key,
         }
         response = requests.get(url, params=params)
         if response.status_code != 200:
@@ -89,29 +94,26 @@ class EdinetWrapper:
         if status_code != 200:
             raise Exception(f"failed to get document list! status code is {status_code}")
 
-        documents = json_data['results']
+        documents = json_data["results"]
         df = pd.DataFrame(documents)
         return df
 
     def download_pdf_of_financial_report(self, doc_id: str) -> str:
         url = self.get_document_url(doc_id=doc_id)
-        params = {
-            "type": 2,  # PDFを取得する場合は2を指定
-            "Subscription-Key": self.__api_key
-        }
+        params = {"type": 2, "Subscription-Key": self.__api_key}  # PDFを取得する場合は2を指定
 
         try:
             res = requests.get(url, params=params, verify=False)
-            output_path = os.path.join(self.__output_folder, f'{doc_id}.pdf')
+            output_path = os.path.join(self.__output_folder, f"{doc_id}.pdf")
             if res.status_code != 200:
                 raise Exception(f"fail to download {doc_id} document. status code is {res.status_code}")
 
-            with open(output_path, 'wb') as file_out:
+            with open(output_path, "wb") as file_out:
                 file_out.write(res.content)
                 return output_path
         except urllib.error.HTTPError as e:
             if e.code >= 400:
-                sys.stderr.write(e.reason + '\n')
+                sys.stderr.write(e.reason + "\n")
             else:
                 raise e
 
@@ -122,8 +124,15 @@ class EdinetWrapper:
         # 有価証券報告書を指定したフォルダにダウンロードする
         res = DownloadResult(target_date=target_date)
         for _, doc in df.iterrows():
-            print(doc['edinetCode'], doc['docID'], doc['filerName'], doc['docDescription'], doc['submitDateTime'], sep='\t')
-            doc_id = doc['docID']
+            print(
+                doc["edinetCode"],
+                doc["docID"],
+                doc["filerName"],
+                doc["docDescription"],
+                doc["submitDateTime"],
+                sep="\t",
+            )
+            doc_id = doc["docID"]
 
             try:
                 self.download_pdf_of_financial_report(doc_id=doc_id)

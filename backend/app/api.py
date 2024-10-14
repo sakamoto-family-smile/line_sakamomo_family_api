@@ -1,11 +1,11 @@
+from enum import Enum
 from logging import StreamHandler, getLogger
+from typing import List
 
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from starlette.exceptions import HTTPException
-from typing import List
-from enum import Enum
 
 from .controller import Controller
 
@@ -100,16 +100,14 @@ def financial_document_list(request: FinancialDocumentListRequest):
                 doc_id=item["doc_id"],
                 doc_url=item["doc_url"],
                 filer_name=item["filer_name"],
-                document_description=item["doc_description"]
+                document_description=item["doc_description"],
             )
             for item in res.detail["items"]
         ]
     except Exception as e:
         logger.error(e)
         raise HTTPException(status_code=500, detail="Internal Server Error. Search financial report process is failed.")
-    return FinancialDocumentListResponse(
-        status=0, document_list=document_list, request_id=res.request_id
-    )
+    return FinancialDocumentListResponse(status=0, document_list=document_list, request_id=res.request_id)
 
 
 @app.post("/analyze_financial_document")
@@ -120,16 +118,14 @@ def analyze_financial_document(request: AnalyzeFinancialReportRequest):
         message = None
 
     try:
-        res = controller.analyze_financial_document(
-            gcs_uri=request.gcs_uri, message=message
-        )
+        res = controller.analyze_financial_document(gcs_uri=request.gcs_uri, message=message)
     except Exception as e:
         logger.error(e)
-        raise HTTPException(status_code=500, detail="Internal Server Error. Analysis Financial Report process is failed.")
+        raise HTTPException(
+            status_code=500, detail="Internal Server Error. Analysis Financial Report process is failed."
+        )
     return AnalyzeFinancialReportResponse(
-        text=res.detail["response_text"],
-        prompt=res.detail["prompt"],
-        request_id=res.request_id
+        text=res.detail["response_text"], prompt=res.detail["prompt"], request_id=res.request_id
     )
 
 
@@ -141,10 +137,7 @@ def upload_financial_report(request: UploadFinancialReportRequest):
     except Exception as e:
         logger.error(e)
         raise HTTPException(status_code=500, detail="Internal Server Error. Upload Financial Report Process is failed.")
-    return UploadFinancialReportResponse(
-        gcs_uri=res.detail["gcs_uri"],
-        request_id=res.request_id
-    )
+    return UploadFinancialReportResponse(gcs_uri=res.detail["gcs_uri"], request_id=res.request_id)
 
 
 @app.get("/download_financial_document")
@@ -153,15 +146,13 @@ def download_financial_document(gcs_uri: str):
         res = controller.downalod_financial_document(gcs_uri=gcs_uri)
     except Exception as e:
         logger.error(e)
-        raise HTTPException(status_code=500, detail="Internal Server Error. Download Financial Report Process is failed.")
+        raise HTTPException(
+            status_code=500, detail="Internal Server Error. Download Financial Report Process is failed."
+        )
     # TODO : FileResponseを使うと楽かも
     # return fastapi.responses.Response(
     #     content=res.detail["document_data"],
     #     media_type=res.detail["mime_type"],
     #     status_code=200
     # )
-    return FileResponse(
-        path=res.detail["document_path"],
-        media_type=res.detail["mime_type"],
-        status_code=200
-    )
+    return FileResponse(path=res.detail["document_path"], media_type=res.detail["mime_type"], status_code=200)

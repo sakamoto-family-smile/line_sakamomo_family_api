@@ -1,12 +1,14 @@
+import json
 import os
+from abc import ABC, abstractmethod
+from collections.abc import Iterable
 from datetime import datetime
+from io import BytesIO
 from logging import Logger, StreamHandler, getLogger
 from typing import List
-from abc import abstractmethod, ABC
-import json
-from collections.abc import Iterable
 
 import requests
+import vertexai
 from langchain.agents import AgentType, initialize_agent, load_tools
 from langchain.memory import ConversationBufferMemory
 from langchain.tools.base import BaseTool
@@ -14,15 +16,12 @@ from langchain_core.chat_history import BaseChatMessageHistory
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_google_firestore import FirestoreChatMessageHistory
 from langchain_google_vertexai import VertexAI
-from pydantic import BaseModel
-
-import vertexai
-from vertexai.generative_models import GenerativeModel, Part, GenerationConfig, GenerationResponse, SafetySetting
 from proto.marshal.collections import RepeatedComposite
-from io import BytesIO
+from pydantic import BaseModel
+from vertexai.generative_models import GenerationConfig, GenerationResponse, GenerativeModel, Part, SafetySetting
 
 from .firebase_util import get_db_client_with_default_credentials
-from .gcp_util import upload_file_into_gcs, download_file_from_gcs
+from .gcp_util import download_file_from_gcs, upload_file_into_gcs
 
 local_logger = getLogger(__name__)
 local_logger.addHandler(StreamHandler())
@@ -119,7 +118,9 @@ class MainAgent(AbstractAgent):
         # デバッグ用に過去履歴のメッセージを出力する
         if self.__agent_config.debug_mode:
             for i, message in enumerate(memory.messages):
-                print(f"{i} : id={message.id}, name={message.name}, message={message.content}, add_kwargs={message.additional_kwargs}, metadata={message.response_metadata}")
+                print(
+                    f"{i} : id={message.id}, name={message.name}, message={message.content}, add_kwargs={message.additional_kwargs}, metadata={message.response_metadata}"
+                )
 
         self.__agent_with_chat_history = RunnableWithMessageHistory(
             self.__agent,
@@ -165,33 +166,26 @@ class FinancialReportAgent(AbstractAgent):
     def __init__(self, config: FinancialAgentConfig) -> None:
         super().__init__()
 
-        vertexai.init(
-            project=os.environ["GCP_PROJECT"],
-            location=os.environ["GCP_LOCATION"]
-        )
+        vertexai.init(project=os.environ["GCP_PROJECT"], location=os.environ["GCP_LOCATION"])
         self.__model = GenerativeModel(model_name=config.llm_model_name)
         self.__config = config
-        self.__generation_config = GenerationConfig(
-            temperature=config.temperature,
-            max_output_tokens=8192,
-            top_p=0.95
-        )
+        self.__generation_config = GenerationConfig(temperature=config.temperature, max_output_tokens=8192, top_p=0.95)
         self.__safety_settings = [
             SafetySetting(
                 category=SafetySetting.HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-                threshold=SafetySetting.HarmBlockThreshold.OFF
+                threshold=SafetySetting.HarmBlockThreshold.OFF,
             ),
             SafetySetting(
                 category=SafetySetting.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-                threshold=SafetySetting.HarmBlockThreshold.OFF
+                threshold=SafetySetting.HarmBlockThreshold.OFF,
             ),
             SafetySetting(
                 category=SafetySetting.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-                threshold=SafetySetting.HarmBlockThreshold.OFF
+                threshold=SafetySetting.HarmBlockThreshold.OFF,
             ),
             SafetySetting(
                 category=SafetySetting.HarmCategory.HARM_CATEGORY_HARASSMENT,
-                threshold=SafetySetting.HarmBlockThreshold.OFF
+                threshold=SafetySetting.HarmBlockThreshold.OFF,
             ),
         ]
         self.__work_folder = os.path.join(os.path.dirname(__file__), "work")
@@ -222,26 +216,25 @@ class FinancialReportAgent(AbstractAgent):
 
         # LLMを利用した解析処理を実施
         contents = [file_data, prompt]
-        response = self.__model.generate_content(contents=contents,
-                                                 generation_config=self.__generation_config)
+        response = self.__model.generate_content(contents=contents, generation_config=self.__generation_config)
 
         # 解析結果含めて、ログとして出力
-        self.__upload_llm_log(response=response,
-                              request_id=request_id,
-                              prompt=prompt,
-                              timestamp=input_data["timestamp"],
-                              gcs_uri=gcs_uri)
+        self.__upload_llm_log(
+            response=response, request_id=request_id, prompt=prompt, timestamp=input_data["timestamp"], gcs_uri=gcs_uri
+        )
 
         # 解析結果を返す
         return LLMAgentResponse(text=response.text, metadata={})
 
     # TODO : リファクタリングする（内部関数とかをutilとかに切り出す）
-    def __upload_llm_log(self,
-                         response: GenerationResponse | Iterable[GenerationResponse],
-                         request_id: str,
-                         prompt: str,
-                         timestamp: datetime,
-                         gcs_uri: str):
+    def __upload_llm_log(
+        self,
+        response: GenerationResponse | Iterable[GenerationResponse],
+        request_id: str,
+        prompt: str,
+        timestamp: datetime,
+        gcs_uri: str,
+    ):
         # citation_metadataオブジェクトをリストに変換する
         def repeated_citations_to_list(citations: RepeatedComposite) -> list:
             citation_li = []
@@ -272,11 +265,9 @@ class FinancialReportAgent(AbstractAgent):
                 "input_datas": [],
                 "prompt": prompt,
                 "model_name": self.__config.llm_model_name,
-                "llm_config": {
-                    "temperature": self.__config.temperature
-                },
+                "llm_config": {"temperature": self.__config.temperature},
                 "prompt_token_count": response._raw_response.usage_metadata.prompt_token_count,
-                "gcs_uri": gcs_uri
+                "gcs_uri": gcs_uri,
             },
             "output": {
                 "text": response.candidates[0].text,
@@ -285,12 +276,9 @@ class FinancialReportAgent(AbstractAgent):
                 "safety_ratings": repeated_safety_ratings_to_list(response.candidates[0].safety_ratings),
                 "citation_metadata": repeated_citations_to_list(response.candidates[0].citation_metadata.citations),
                 "candidates_token_count": response._raw_response.usage_metadata.candidates_token_count,
-                "total_token_count": response._raw_response.usage_metadata.total_token_count
+                "total_token_count": response._raw_response.usage_metadata.total_token_count,
             },
-            "meta": {
-                "timestamp": timestamp.strftime("%Y%m%d%H%M%S"),
-                "request_id": request_id
-            }
+            "meta": {"timestamp": timestamp.strftime("%Y%m%d%H%M%S"), "request_id": request_id},
         }
         tmp_log_file = os.path.join(self.__work_folder, "tmp_log.json")
         with open(tmp_log_file, "w") as f:
@@ -303,7 +291,7 @@ class FinancialReportAgent(AbstractAgent):
                 project_id=os.environ["GCP_PROJECT"],
                 bucket_name=self.__config.log_bucket_name,
                 remote_file_path=f"{self.__config.log_base_folder}/{datetime_str}/{request_id}/llm_log.json",
-                local_file_path=tmp_log_file
+                local_file_path=tmp_log_file,
             )
         except Exception as e:
             local_logger.error(e)

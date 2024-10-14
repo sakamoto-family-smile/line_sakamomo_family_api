@@ -1,12 +1,11 @@
-import streamlit as st
+import os
 from dataclasses import dataclass
 from logging import StreamHandler, getLogger
 
-from login import LoginHelper
-from backend_util import BackendRequester
 import pandas as pd
-import os
-
+import streamlit as st
+from backend_util import BackendRequester
+from login import LoginHelper
 
 # グローバル変数
 TOKEN_KEY = "authenticated"
@@ -33,17 +32,11 @@ def check_auth_key() -> bool:
 
 
 def set_download_file(filename: str, file_data: bytes):
-    st.session_state[DOWNLOAD_FILE_KEY] = {
-        "filename": filename,
-        "file_data": file_data
-    }
+    st.session_state[DOWNLOAD_FILE_KEY] = {"filename": filename, "file_data": file_data}
 
 
 def get_download_file() -> tuple:
-    return (
-        st.session_state[DOWNLOAD_FILE_KEY]["filename"],
-        st.session_state[DOWNLOAD_FILE_KEY]["file_data"]
-    )
+    return (st.session_state[DOWNLOAD_FILE_KEY]["filename"], st.session_state[DOWNLOAD_FILE_KEY]["file_data"])
 
 
 def login_page(placeholder):
@@ -177,8 +170,7 @@ def financial_report_analysis_widget():
 
         with st.spinner("please wait to search the financial report.."):
             res = backend_requester.request_financial_document_list(
-                token=st.session_state[TOKEN_KEY],
-                company_name=company_name
+                token=st.session_state[TOKEN_KEY], company_name=company_name
             )
 
         # dataframeに変換し、キャッシュとして保存
@@ -191,13 +183,12 @@ def financial_report_analysis_widget():
         st.table(df)
 
         # 分析対象のドキュメントを指定する
-        company_info = str(st.selectbox(
-            "分析したい決算資料を選択してください",
-            [
-                item["filer_name"] + "_" + item["document_description"]
-                for _, item in df.iterrows()
-            ]
-        ))
+        company_info = str(
+            st.selectbox(
+                "分析したい決算資料を選択してください",
+                [item["filer_name"] + "_" + item["document_description"] for _, item in df.iterrows()],
+            )
+        )
 
         # 解析ボタンの表示
         analyze_btn = st.button("解析開始")
@@ -207,23 +198,17 @@ def financial_report_analysis_widget():
 
             # ドキュメントをEDINETから、GCSにアップロードする
             filer_name, document_description = company_info.split("_")
-            doc_id = df.query(
-                f'filer_name == "{filer_name}" & document_description == "{document_description}"'
-            ).iloc[0]["doc_id"]
-            res = backend_requester.request_upload_financial_report(
-                token=st.session_state[TOKEN_KEY],
-                doc_id=doc_id
-            )
+            doc_id = df.query(f'filer_name == "{filer_name}" & document_description == "{document_description}"').iloc[
+                0
+            ]["doc_id"]
+            res = backend_requester.request_upload_financial_report(token=st.session_state[TOKEN_KEY], doc_id=doc_id)
 
             # 対象となる決算資料を分析する
             gcs_uri = res["gcs_uri"]
             st.text(f"gcs uri : {gcs_uri}")
             with st.spinner("please wait to analyze the financial report.."):
                 res = backend_requester.request_analyze_financial_document(
-                    token=st.session_state[TOKEN_KEY],
-                    analysis_type=0,
-                    gcs_uri=gcs_uri,
-                    message=""
+                    token=st.session_state[TOKEN_KEY], analysis_type=0, gcs_uri=gcs_uri, message=""
                 )
 
             # 解析結果を出力する
@@ -235,8 +220,7 @@ def financial_report_analysis_widget():
             # TODO : 階層が深いので、リファクタリングするか・関数として切り出す
             # TODO : LLMの実行をしなくても、ダウンロードできるようにしたい（ダウンロードボタンを作りたい）
             res = backend_requester.request_download_financial_document(
-                token=st.session_state[TOKEN_KEY],
-                gcs_uri=gcs_uri
+                token=st.session_state[TOKEN_KEY], gcs_uri=gcs_uri
             )
             filename = gcs_uri.split("/")[-1]
             file_path = os.path.join(OUTPUT_FOLDER, filename)
@@ -247,12 +231,7 @@ def financial_report_analysis_widget():
         # ダウンロードボタンを配置する
         if DOWNLOAD_FILE_KEY in st.session_state:
             filename, file_data = get_download_file()
-            _ = st.download_button(
-                label="PDFのダウンロード",
-                data=file_data,
-                file_name=filename,
-                mime="application/pdf"
-            )
+            _ = st.download_button(label="PDFのダウンロード", data=file_data, file_name=filename, mime="application/pdf")
 
 
 def main_page(placeholder):
@@ -266,10 +245,12 @@ def main_page(placeholder):
 
 
 def main():
-    st.set_page_config(page_title='Sakamomo-Family-App',
-                       page_icon=':chart_with_upwards_trend:',
-                       layout='wide',
-                       initial_sidebar_state="collapsed")
+    st.set_page_config(
+        page_title="Sakamomo-Family-App",
+        page_icon=":chart_with_upwards_trend:",
+        layout="wide",
+        initial_sidebar_state="collapsed",
+    )
     placeholder = st.empty()
     os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
