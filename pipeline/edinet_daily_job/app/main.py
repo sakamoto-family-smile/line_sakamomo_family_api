@@ -22,15 +22,44 @@ def main(duration_days: int, api_key: str, table_id: str):
     # TODO : 現状はdataframeをそのままbigqueryのテーブルに入れるような設定となっているので修正が必要
     print("start to insert documents list into bigquery")
     client = bigquery.Client()
-    job_config = bigquery.LoadJobConfig(
-        write_disposition="WRITE_TRUNCATE"
+    job_config = bigquery.QueryJobConfig(
+        write_disposition="WRITE_TRUNCATE",
+        query_parameters=[
+            bigquery.ArrayQueryParameter(
+                'df', 'STRUCT<...>', df.to_dict('records')
+            )
+        ]
     )
-    job = client.load_table_from_dataframe(
-        df,
-        table_id,
-        job_config=job_config
-    )
-    job.result()
+
+    # 重複を排除する条件を指定した MERGE 文
+    merge_query = f"""
+        MERGE `{table_id}` T
+        USING (
+            SELECT * FROM UNNEST(@df)
+        ) S
+        ON
+            T.docID = S.docID
+            AND
+            T.submitDateTime = S.submitDateTime
+            AND
+            T.docDescription = S.docDescription
+            AND
+            T.docInfoEditStatus = S.docInfoEditStatus
+            AND
+            T.issuerEdinetCode = S.issuerEdinetCode
+            AND
+            T.formCode = S.formCode
+            AND
+            T.docTypeCode = S.docTypeCode
+            AND
+            T.parentDocID = S.parentDocID
+        WHEN MATCHED THEN
+            UPDATE SET ...  -- 更新するカラムを指定 (必要があれば)
+        WHEN NOT MATCHED THEN
+            INSERT ROW  -- 挿入するカラムを指定
+    """
+    query_job = client.query(merge_query, job_config=job_config)
+    query_job.result()
 
 
 if __name__ == "__main__":
