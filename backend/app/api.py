@@ -4,6 +4,7 @@ from typing import List
 
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from starlette.exceptions import HTTPException
 
@@ -74,6 +75,21 @@ logger.setLevel("DEBUG")
 app = FastAPI(title="sakamomo_family_api", description="The API is sakamomo family bot.")
 session_id = "sakamomo_family_session"
 controller = Controller(dialogue_session_id=session_id)
+
+
+# CORS対応
+origins = [
+    "http://localhost",
+    "http://localhost:8080",
+    "https://sakamomo-family-vr-front-749925056555.asia-northeast1.run.app"
+]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/health")
