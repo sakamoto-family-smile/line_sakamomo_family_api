@@ -37,7 +37,7 @@ def main(duration_days: int, api_key: str, table_id: str):
         USING (
             SELECT * FROM UNNEST(@df)
         ) S
-        ON
+        ON(
             T.docID = S.docID
             AND
             T.submitDateTime = S.submitDateTime
@@ -53,6 +53,7 @@ def main(duration_days: int, api_key: str, table_id: str):
             T.docTypeCode = S.docTypeCode
             AND
             T.parentDocID = S.parentDocID
+        )
         WHEN MATCHED THEN
             UPDATE SET ...  -- 更新するカラムを指定 (必要があれば)
         WHEN NOT MATCHED THEN

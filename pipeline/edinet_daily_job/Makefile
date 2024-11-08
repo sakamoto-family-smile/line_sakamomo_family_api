@@ -4,6 +4,8 @@ DOCKER_BASE_URL=${GOOGLE_REGION}-docker.pkg.dev
 DOCKER_URL=${DOCKER_BASE_URL}/${GOOGLE_CLOUD_PROJECT}/line-sakamomo-family-api/edinet_job
 JOB_NAME=sakamomo-family-job
 DURATION_DAYS=365
+CPU=2
+MEMORY=4
 
 include .env
 
@@ -20,6 +22,8 @@ deploy_job:
 	gcloud run jobs create ${JOB_NAME} \
 		--image ${DOCKER_URL} \
 		--region ${GOOGLE_REGION} \
+		--cpu ${CPU} \
+		--memory ${MEMORY}G \
 		--set-env-vars EDINET_API_KEY=${EDINET_API_KEY} \
 		--set-env-vars TABLE_ID=${TABLE_ID}
 
