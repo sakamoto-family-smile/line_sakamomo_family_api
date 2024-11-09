@@ -24,6 +24,7 @@ def main(duration_days: int, api_key: str, table_id: str):
     client = bigquery.Client()
     job_config = bigquery.QueryJobConfig(
         write_disposition="WRITE_TRUNCATE",
+        timeout_ms=3600000,
         query_parameters=[
             bigquery.ArrayQueryParameter(
                 'df', 'STRUCT<...>', df.to_dict('records')
