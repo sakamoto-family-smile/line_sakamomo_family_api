@@ -91,6 +91,10 @@ class EdinetWrapper:
 
         documents = json_data['results']
         df = pd.DataFrame(documents)
+
+        # submitDateTimeを文字列から日付情報に変換
+        df["submitDateTime"] = pd.to_datetime(df["submitDateTime"])
+
         return df
 
     def download_pdf_of_financial_report(self, doc_id: str):
@@ -133,22 +137,27 @@ class EdinetWrapper:
 
         return res
 
-    def get_documents_list(self, duration_days: int) -> GetDocumentListResult:
-        current_date = datetime.now()
+    def get_documents_list(self, duration_days: int, target_date: datetime) -> GetDocumentListResult:
         dfs = []
-        res = GetDocumentListResult(current_date=current_date)
+        res = GetDocumentListResult(current_date=target_date)
         for day in range(duration_days):
-            target_date = current_date - timedelta(days=day)
-            print(target_date.strftime("%Y-%m-%d"))
+            t = target_date - timedelta(days=day)
+            print(t.strftime("%Y-%m-%d"))
 
             try:
-                df = self.get_documents_info_dataframe(target_date=target_date)
+                df = self.get_documents_info_dataframe(target_date=t)
                 dfs.append(df)
-                res.append_success_date(target_date)
+                res.append_success_date(t)
             except Exception as e:
                 print(f"failed to get document list. error detail is {e}.")
-                res.append_error_date(target_date)
+                res.append_error_date(t)
                 continue
         df = pd.concat(dfs, ignore_index=True)
+
+        # object型を文字列型に変換する
+        for col in df.columns:
+            if df[col].dtype == 'object':
+                df[col] = df[col].astype(str)
+
         res.df = df
         return res
