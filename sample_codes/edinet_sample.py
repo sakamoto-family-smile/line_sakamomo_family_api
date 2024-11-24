@@ -9,6 +9,7 @@ from argparse import ArgumentParser
 from enum import Enum
 
 
+EDINET_API_KEY = "xxx"  # EDINETのAPI KEYを入力すること
 
 
 class Mode(Enum):
@@ -83,6 +84,10 @@ def get_documents_info_dataframe(target_date: datetime) -> pd.DataFrame:
 
     documents = json_data['results']
     df = pd.DataFrame(documents)
+
+    # submitDateTimeを文字列から日付情報に変換
+    df["submitDateTime"] = pd.to_datetime(df["submitDateTime"])
+
     return df
 
 
@@ -126,23 +131,28 @@ def download_documents(output_folder: str, target_date: datetime) -> DownloadDoc
     return res
 
 
-def get_documents_list(duration_days: int) -> GetDocumentListResult:
-    current_date = datetime.now()
+def get_documents_list(duration_days: int, target_date: datetime) -> GetDocumentListResult:
     dfs = []
     res = GetDocumentListResult()
     for day in range(duration_days):
-        target_date = current_date - timedelta(days=day)
-        print(target_date.strftime("%Y-%m-%d"))
+        t = target_date - timedelta(days=day)
+        print(t.strftime("%Y-%m-%d"))
 
         try:
-            df = get_documents_info_dataframe(target_date=target_date)
+            df = get_documents_info_dataframe(target_date=t)
             dfs.append(df)
-            res.append_success_date(target_date)
+            res.append_success_date(t)
         except Exception as e:
             print(f"failed to get document list. error detail is {e}.")
-            res.append_error_date(target_date)
+            res.append_error_date(t)
             continue
     df = pd.concat(dfs, ignore_index=True)
+
+    # object型を文字列型に変換する
+    for col in df.columns:
+        if df[col].dtype == 'object':
+            df[col] = df[col].astype(str)
+
     res.df = df
     return res
 
@@ -155,14 +165,14 @@ if __name__ == "__main__":
     parser.add_argument("--target_date", type=str, help="ドキュメント一覧を取得する際の日付情報. YYYY-MM-DDの文字列で記載")
     parser.add_argument("--duration_days", type=int, help="ドキュメント一覧情報を取得する際の期間を指定。最新日付から逆算した期間を日単位で指定")
     args = parser.parse_args()
+    target_date_str = args.target_date
+    target_date = datetime.strptime(target_date_str, "%Y-%m-%d")
     output_folder = os.path.join(os.path.dirname(__file__), "output", datetime.now().strftime("%Y%m%d%H%M%S"))
     os.makedirs(output_folder, exist_ok=True)
 
     mode = int(args.mode)
     if mode == Mode.DOWNLOAD_DOCUMENTS.value:
         # EDINETから指定した日付の有価証券報告書のリストを取得する
-        target_date_str = args.target_date
-        target_date = datetime.strptime(target_date_str, "%Y-%m-%d")
         res = download_documents(output_folder=output_folder, target_date=target_date)
 
         # 取得結果を表示する
@@ -175,7 +185,7 @@ if __name__ == "__main__":
         # EDINETからドキュメント一覧を、本日から逆算して、指定した日数分取得する
         # ドキュメントのpdfはダウンロードしない
         duration_days = int(args.duration_days)
-        res = get_documents_list(duration_days=duration_days)
+        res = get_documents_list(duration_days=duration_days, target_date=target_date)
         df = res.df
         df.to_csv(os.path.join(output_folder, "documents.csv"), index=False)
 
@@ -183,6 +193,10 @@ if __name__ == "__main__":
         print("--- document list results ---")
         print(f"duration days = {duration_days}")
         print(f"document count is {len(df)}")
+        print("df info is the following..")
+        print(df.info())
+        # print("df dict  is the  following..")
+        # print(df.to_dict())
         print("detail is the following..")
         print(df)
     else:
