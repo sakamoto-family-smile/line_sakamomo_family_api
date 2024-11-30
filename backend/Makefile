@@ -1,12 +1,11 @@
-GOOGLE_CLOUD_PROJECT=youyaku-ai
 GOOGLE_REGION=asia-northeast1
 DOCKER_BASE_URL=${GOOGLE_REGION}-docker.pkg.dev
 DOCKER_URL=${DOCKER_BASE_URL}/${GOOGLE_CLOUD_PROJECT}/line-sakamomo-family-api/api
 SERVICE_NAME=line-sakamomo-family-api
 API_PORT=8080
 LANGCHAIN_ENDPOINT=https://api.smith.langchain.com
-include .env
 
+include .env
 setup:
 	gcloud auth configure-docker ${DOCKER_BASE_URL}
 
