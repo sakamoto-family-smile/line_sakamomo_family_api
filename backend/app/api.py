@@ -3,8 +3,8 @@ from logging import StreamHandler, getLogger
 from typing import List
 
 from fastapi import FastAPI
-from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from starlette.exceptions import HTTPException
 
@@ -81,7 +81,7 @@ controller = Controller(dialogue_session_id=session_id)
 origins = [
     "http://localhost",
     "http://localhost:8080",
-    "https://sakamomo-family-vr-front-749925056555.asia-northeast1.run.app"
+    "https://sakamomo-family-vr-front-749925056555.asia-northeast1.run.app",
 ]
 app.add_middleware(
     CORSMiddleware,
