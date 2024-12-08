@@ -199,21 +199,6 @@ class FinancialReportAgent(AbstractAgent):
         request_id: str = input_data["request_id"]
         file_data = Part.from_uri(uri=gcs_uri, mime_type="application/pdf")
 
-        # GCSからローカルにpdfを落として、byte dataなfile dataに変換する
-        # uriからpdfが取れていれば、下記対応は不要
-        """
-        local_file_path = os.path.join(self.__work_folder, f"{request_id}.pdf")
-        remote_path_with_bucket_name = gcs_uri.replace("gs://", "")
-        bucket_name, remote_path = remote_path_with_bucket_name.split("/", 1)
-        download_file_from_gcs(project_id=os.environ["GCP_PROJECT"],
-                               bucket_name=bucket_name,
-                               remote_file_path=remote_path,
-                               local_file_path=local_file_path)
-        with open(local_file_path, "rb") as f:
-            byte_datas = BytesIO(f.read())
-        file_data = Part.from_data(data=byte_datas.getvalue(), mime_type="application/pdf")
-        """
-
         # LLMを利用した解析処理を実施
         contents = [file_data, prompt]
         response = self.__model.generate_content(contents=contents, generation_config=self.__generation_config)

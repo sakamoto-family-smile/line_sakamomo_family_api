@@ -1,4 +1,3 @@
-GOOGLE_CLOUD_PROJECT=youyaku-ai
 GOOGLE_REGION=asia-northeast1
 DOCKER_BASE_URL=${GOOGLE_REGION}-docker.pkg.dev
 DOCKER_URL=${DOCKER_BASE_URL}/${GOOGLE_CLOUD_PROJECT}/line-sakamomo-family-api/edinet_job
@@ -11,10 +10,8 @@ TASK_TIMEOUT=3600
 DELETE_FLAG=1
 JOB_SCHEDULE="0 12 * * *"
 JOB_HEADERS="DURATION_DAYS=${DURATION_DAYS},DELETE_FLAG=${DELETE_FLAG}"
-JOB_SERVICE_ACCOUNT=xxx
 
 include .env
-
 setup:
 	gcloud auth configure-docker ${DOCKER_BASE_URL}
 
