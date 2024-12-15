@@ -17,6 +17,31 @@ GCP_PROJECT_ID = "xxx"
 GCS_BUCKET_NAME = ""
 
 
+class InternalLog:
+    def __init__(self) -> None:
+        self.__queue = []
+
+    def set_log(self,
+                analyze_result: str,
+                evaluate_result: str,
+                analyze_prompt: str):
+        self.__queue.append(
+            {
+                "analyze_result": analyze_result,
+                "evaluate_result": evaluate_result,
+                "analyze_prompt": analyze_prompt
+            }
+        )
+
+    def print_log(self, index: int):
+        analyze_result = self.__queue[index]["analyze_result"]
+        evaluate_result = self.__queue[index]["evaluate_result"]
+        analyze_prompt = self.__queue[index]["analyze_prompt"]
+        print(f"analyze_result: {analyze_result}")
+        print(f"evaluate_result: {evaluate_result}")
+        print(f"analyze_prompt: {analyze_prompt}")
+
+
 def analyze_financial_report(
     pdf_uri: str,
     prompt: str,
@@ -209,11 +234,14 @@ def main():
 
 ・財務三表（損益計算書、貸借対照表、キャッシュフロー表）について、分析を行ってください。
     """
-    max_loop_count = 10
+    max_loop_count = 5
     output_folder = os.path.join(os.path.dirname(__file__), "output", "auto_prompt_engineering_sample")
     os.makedirs(output_folder, exist_ok=True)
+    internal_logger = InternalLog()
 
     for i in range(max_loop_count):
+        print(f"{i}/{max_loop_count} : analyze financial report...")
+
         # 有価証券報告書の分析を行う
         analyze_result = analyze_financial_report(
             pdf_uri=pdf_uri,
@@ -236,6 +264,18 @@ def main():
             analyze_prompt=analyze_prompt,
             model_name="gemini-1.5-flash"
         )
+
+        # 1イテレーション分の結果を出力する
+        internal_logger.set_log(
+            analyze_result=analyze_result,
+            evaluate_result=evaluate_result,
+            analyze_prompt=analyze_prompt
+        )
+        internal_logger.print_log(index=i)
+
+        if analyze_prompt == "END":
+            print("analyze_prompt is end! break")
+            break
 
 
 if __name__ == "__main__":
