@@ -37,9 +37,13 @@ class InternalLog:
         analyze_result = self.__queue[index]["analyze_result"]
         evaluate_result = self.__queue[index]["evaluate_result"]
         analyze_prompt = self.__queue[index]["analyze_prompt"]
+        print("=======================================")
         print(f"analyze_result: {analyze_result}")
+        print("=======================================")
         print(f"evaluate_result: {evaluate_result}")
+        print("=======================================")
         print(f"analyze_prompt: {analyze_prompt}")
+        print("=======================================")
 
 
 def analyze_financial_report(
@@ -65,14 +69,20 @@ def analyze_financial_report(
     # LLMを利用するのに必要なパラメーターを設定
     vertexai.init(project=GCP_PROJECT_ID, location="us-central1")
     model = GenerativeModel(model_name=model_name)
-    temperature = 0.8
+    temperature = 0
     config = GenerationConfig(
         temperature=temperature
     )
 
     # LLMを利用して解析処理を実施
     pdf_file = Part.from_uri(uri=pdf_uri, mime_type="application/pdf")
-    contents = [pdf_file, prompt]
+    p = f"""
+上記の決算資料から、後述する観点について企業分析を行い、将来の株価の増減具合を教えてください。
+
+======
+{prompt}
+    """
+    contents = [pdf_file, p]
     response = model.generate_content(contents=contents, generation_config=config)
 
     # ログの作成をし、GCSにアップロードする
@@ -138,10 +148,15 @@ def adjust_analysis_prompt(
     prompt = f"""
 あなたはLLMのプロンプトを書き換えるエキスパートです。
 下記の分析に関する評価結果と分析時に利用したプロンプトから、最適なプロンプトを出力してください。
-ただし、プロンプトの変更点がない場合は、END、と出力してください。
+ただし、後述するルールを守って、プロンプトを出力してください。
 
 分析の評価結果: {evaluator_result}
 分析時に利用したプロンプト: {analyze_prompt}
+
+# ルール
+・分析観点は一つに拘らず、複数の観点を出すようにしてください。
+・プロンプトの変更点がない場合は、プロンプト内容自体をFINISH、と表記するようにしてください。
+・会社名、具体的な決算資料の数値といった企業の固有情報をプロンプトに含めないでください。
     """
 
     # LLMを利用して解析処理を実施
@@ -198,7 +213,6 @@ def upload_llm_log_data(
         print(e)
     finally:
         os.remove(tmp_log_file)
-        print("end")
 
 
 # citation_metadataオブジェクトをリストに変換する
@@ -228,11 +242,9 @@ def repeated_safety_ratings_to_list(safety_ratings: RepeatedComposite) -> list:
 
 
 def main():
-    pdf_uri = "gs://sakamomo_family_api/document/20240930071845/ccbc9f9c-7e3a-4607-b746-6ef749fb9c1d/S100T80B.pdf"
+    pdf_uri = f"gs://{GCS_BUCKET_NAME}/sample/S100TBTR.pdf"
     analyze_prompt = """
-上記の決算資料から、後述する観点について分析を行い、下記の内容について回答してください。
-
-・財務三表（損益計算書、貸借対照表、キャッシュフロー表）について、分析を行ってください。
+・財務三表（損益計算書、貸借対照表、キャッシュフロー表）を分析時に利用すること。
     """
     max_loop_count = 5
     output_folder = os.path.join(os.path.dirname(__file__), "output", "auto_prompt_engineering_sample")
@@ -240,7 +252,7 @@ def main():
     internal_logger = InternalLog()
 
     for i in range(max_loop_count):
-        print(f"{i}/{max_loop_count} : analyze financial report...")
+        print(f"{i+1}/{max_loop_count} : analyze financial report...")
 
         # 有価証券報告書の分析を行う
         analyze_result = analyze_financial_report(
@@ -273,7 +285,7 @@ def main():
         )
         internal_logger.print_log(index=i)
 
-        if analyze_prompt == "END":
+        if "FINISH" in analyze_prompt:
             print("analyze_prompt is end! break")
             break
 
