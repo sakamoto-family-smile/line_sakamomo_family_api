@@ -1,6 +1,5 @@
 import os
 from datetime import datetime
-from io import BytesIO
 from logging import StreamHandler, getLogger
 from typing import List
 from uuid import uuid4

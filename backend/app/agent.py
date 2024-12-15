@@ -3,7 +3,6 @@ import os
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from datetime import datetime
-from io import BytesIO
 from logging import Logger, StreamHandler, getLogger
 from typing import List
 
@@ -20,8 +19,7 @@ from proto.marshal.collections import RepeatedComposite
 from pydantic import BaseModel
 from vertexai.generative_models import GenerationConfig, GenerationResponse, GenerativeModel, Part, SafetySetting
 
-from .firebase_util import get_db_client_with_default_credentials
-from .gcp_util import download_file_from_gcs, upload_file_into_gcs
+from .gcp_util import upload_file_into_gcs
 
 local_logger = getLogger(__name__)
 local_logger.addHandler(StreamHandler())
