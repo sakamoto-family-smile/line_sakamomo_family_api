@@ -15,6 +15,7 @@ import uuid
 
 GCP_PROJECT_ID = "xxx"
 GCS_BUCKET_NAME = ""
+PDF_URI = ""
 
 
 class InternalLog:
@@ -47,6 +48,7 @@ class InternalLog:
 
 
 def analyze_financial_report(
+    request_id: str,
     pdf_uri: str,
     prompt: str,
     model_name: str,
@@ -87,7 +89,6 @@ def analyze_financial_report(
 
     # ログの作成をし、GCSにアップロードする
     # GCSのフォルダ階層は、<bucket_name>/<日付>/<uuid>とする
-    request_id = str(uuid.uuid4())
     upload_llm_log_data(
         request_id=request_id,
         response=response,
@@ -103,9 +104,12 @@ def analyze_financial_report(
 
 
 def evaluate_analysis_result(
+    request_id: str,
     pdf_uri: str,
     analyze_result: str,
     model_name: str,
+    bucket_name: str,
+    output_folder: str
 ) -> str:
     """
     LLMを利用して、有価証券報告書の分析結果が妥当だったか？を評価する
@@ -130,13 +134,29 @@ def evaluate_analysis_result(
     pdf_file = Part.from_uri(uri=pdf_uri, mime_type="application/pdf")
     contents = [pdf_file, prompt]
     response = model.generate_content(contents=contents, generation_config=config)
+
+    # 解析結果をログとしてGCSに出力する
+    upload_llm_log_data(
+        request_id=request_id,
+        response=response,
+        prompt=prompt,
+        model_name=model_name,
+        temperature=temperature,
+        bucket_name=bucket_name,
+        output_folder=output_folder,
+        log_name="evaluate_analysis_result_log"
+    )
+
     return response.text
 
 
 def adjust_analysis_prompt(
+    request_id: str,
     evaluator_result: str,
     analyze_prompt: str,
-    model_name: str
+    model_name: str,
+    bucket_name: str,
+    output_folder: str
 ) -> str:
     # LLMを利用するのに必要なパラメーターを設定
     vertexai.init(project=GCP_PROJECT_ID, location="us-central1")
@@ -162,6 +182,19 @@ def adjust_analysis_prompt(
     # LLMを利用して解析処理を実施
     contents = [prompt]
     response = model.generate_content(contents=contents, generation_config=config)
+
+    # 解析結果をログとしてGCSに出力する
+    upload_llm_log_data(
+        request_id=request_id,
+        response=response,
+        prompt=prompt,
+        model_name=model_name,
+        temperature=temperature,
+        bucket_name=bucket_name,
+        output_folder=output_folder,
+        log_name="adjust_analysis_prompt_log"
+    )
+
     return response.text
 
 
@@ -242,7 +275,6 @@ def repeated_safety_ratings_to_list(safety_ratings: RepeatedComposite) -> list:
 
 
 def main():
-    pdf_uri = f"gs://{GCS_BUCKET_NAME}/sample/S100TBTR.pdf"
     analyze_prompt = """
 ・財務三表（損益計算書、貸借対照表、キャッシュフロー表）を分析時に利用すること。
     """
@@ -253,10 +285,12 @@ def main():
 
     for i in range(max_loop_count):
         print(f"{i+1}/{max_loop_count} : analyze financial report...")
+        request_id = str(uuid.uuid4())
 
         # 有価証券報告書の分析を行う
         analyze_result = analyze_financial_report(
-            pdf_uri=pdf_uri,
+            request_id=request_id,
+            pdf_uri=PDF_URI,
             prompt=analyze_prompt,
             model_name="gemini-1.5-flash",
             bucket_name=GCS_BUCKET_NAME,
@@ -265,16 +299,22 @@ def main():
 
         # 分析結果を評価する
         evaluate_result = evaluate_analysis_result(
-            pdf_uri=pdf_uri,
+            request_id=request_id,
+            pdf_uri=PDF_URI,
             analyze_result=analyze_result,
-            model_name="gemini-1.5-flash"
+            model_name="gemini-1.5-flash",
+            bucket_name=GCS_BUCKET_NAME,
+            output_folder=output_folder
         )
 
         # プロンプトを書き換える
         analyze_prompt = adjust_analysis_prompt(
+            request_id=request_id,
             evaluator_result=evaluate_result,
             analyze_prompt=analyze_prompt,
-            model_name="gemini-1.5-flash"
+            model_name="gemini-1.5-flash",
+            bucket_name=GCS_BUCKET_NAME,
+            output_folder=output_folder
         )
 
         # 1イテレーション分の結果を出力する
