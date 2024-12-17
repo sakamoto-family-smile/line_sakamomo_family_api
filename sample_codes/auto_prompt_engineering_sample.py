@@ -2,6 +2,15 @@
 このサンプルコードは、Auto Prompt Enginneringを有価証券報告書の分析に対して、
 検証してみたものとなります.
 一般的なフレームワークを利用していないため、今後はフレームワークを試しに利用してみたいと考えています.
+
+本サンプルコードを使う前に下記セットアップを実施してください。
+1. GCPプロジェクトの作成
+2. project idをGCP_PROJECT_IDに設定
+3. 上記プロジェクト上にGCSのバケットを生成
+4. 作成したバケット名をGCS_BUCKET_NAMEに設定
+5. 任意の有価証券報告書をpdf形式で取得（edinet経由から取得可能）
+6. 取得したPDFを前述したGCSバケット上にアップロード
+7. アップロードしたPDFファイルのURLをPDF_URIに設定
 """
 import vertexai
 from vertexai.generative_models import GenerativeModel, Part, GenerationConfig, GenerationResponse
