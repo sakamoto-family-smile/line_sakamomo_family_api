@@ -56,6 +56,14 @@ class InternalLog:
         print(f"analyze_prompt: {analyze_prompt}")
         print("=======================================")
 
+    def save_log_into_json(self, output_file_path: str):
+        d = {}
+        for i, item in enumerate(self.__queue):
+            d[i] = item
+
+        with open(output_file_path, "w") as f:
+            json.dump(d, f, indent=2)
+
 
 def analyze_financial_report(
     request_id: str,
@@ -297,6 +305,7 @@ def main():
         request_id = str(uuid.uuid4())
 
         # 有価証券報告書の分析を行う
+        print("start to analyze the financial report...")
         analyze_result = analyze_financial_report(
             request_id=request_id,
             pdf_uri=PDF_URI,
@@ -307,6 +316,7 @@ def main():
         )
 
         # 分析結果を評価する
+        print("start to evaluate the analysis result...")
         evaluate_result = evaluate_analysis_result(
             request_id=request_id,
             pdf_uri=PDF_URI,
@@ -317,6 +327,7 @@ def main():
         )
 
         # プロンプトを書き換える
+        print("start to recreate the analysis prompt...")
         analyze_prompt = adjust_analysis_prompt(
             request_id=request_id,
             evaluator_result=evaluate_result,
@@ -337,6 +348,9 @@ def main():
         if "FINISH" in analyze_prompt:
             print("analyze_prompt is end! break")
             break
+
+    # ログをjsonファイルとして出力
+    internal_logger.save_log_into_json(output_file_path=os.path.join(output_folder, "internal_log.json"))
 
 
 if __name__ == "__main__":
