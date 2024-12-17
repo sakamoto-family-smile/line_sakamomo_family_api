@@ -25,6 +25,7 @@ import uuid
 GCP_PROJECT_ID = "xxx"
 GCS_BUCKET_NAME = ""
 PDF_URI = ""
+MAX_LOOP_COUNT = 5
 
 
 class InternalLog:
@@ -287,13 +288,12 @@ def main():
     analyze_prompt = """
 ・財務三表（損益計算書、貸借対照表、キャッシュフロー表）を分析時に利用すること。
     """
-    max_loop_count = 5
     output_folder = os.path.join(os.path.dirname(__file__), "output", "auto_prompt_engineering_sample")
     os.makedirs(output_folder, exist_ok=True)
     internal_logger = InternalLog()
 
-    for i in range(max_loop_count):
-        print(f"{i+1}/{max_loop_count} : analyze financial report...")
+    for i in range(MAX_LOOP_COUNT):
+        print(f"{i+1}/{MAX_LOOP_COUNT} : analyze financial report...")
         request_id = str(uuid.uuid4())
 
         # 有価証券報告書の分析を行う
