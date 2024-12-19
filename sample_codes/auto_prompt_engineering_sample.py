@@ -9,8 +9,9 @@
 3. 上記プロジェクト上にGCSのバケットを生成
 4. 作成したバケット名をGCS_BUCKET_NAMEに設定
 5. 任意の有価証券報告書をpdf形式で取得（edinet経由から取得可能）
-6. 取得したPDFを前述したGCSバケット上にアップロード
-7. アップロードしたPDFファイルのURLをPDF_URIに設定
+6. 取得したPDFを前述したGCSバケット上にアップロード（複数のPDFをアップロードして良い）
+7. アップロードしたPDFファイルを格納しているフォルダURIをPDF_FOLDER_URIに設定
+8. 前述したフォルダURIに含まれるPDFのファイル名をPDF_FILE_LISTにリスト形式で記載
 """
 import vertexai
 from vertexai.generative_models import GenerativeModel, Part, GenerationConfig, GenerationResponse
@@ -374,7 +375,7 @@ def main():
     internal_logger = InternalLog()
     datetime_str = datetime.now().strftime("%Y%m%d%H%M%S")
 
-    for pdf_file_name in PDF_URI_LIST:
+    for pdf_file_name in PDF_FILE_NAME_LIST:
         print(f"start to analyze {pdf_file_name} file...")
         analyze_prompt = default_analyze_prompt
         pdf_uri = PDF_FOLDER_URI + "/" + pdf_file_name
