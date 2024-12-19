@@ -31,23 +31,43 @@ MAX_LOOP_COUNT = 5
 class InternalLog:
     def __init__(self) -> None:
         self.__queue = []
+        self.__latest_prompts = {}
 
     def set_log(self,
+                pdf_uri: str,
+                iter_count: int,
                 analyze_result: str,
                 evaluate_result: str,
                 analyze_prompt: str):
         self.__queue.append(
             {
+                "pdf_uri": pdf_uri,
+                "iter_count": iter_count,
                 "analyze_result": analyze_result,
                 "evaluate_result": evaluate_result,
                 "analyze_prompt": analyze_prompt
             }
         )
+        self.__latest_prompts[pdf_uri] = analyze_prompt
 
-    def print_log(self, index: int):
-        analyze_result = self.__queue[index]["analyze_result"]
-        evaluate_result = self.__queue[index]["evaluate_result"]
-        analyze_prompt = self.__queue[index]["analyze_prompt"]
+    def set_final_analysis_prompt(self, prompt: str):
+        self.__queue.append(
+            {
+                "analyze_final_prompt": prompt
+            }
+        )
+
+    def print_latest_log(self):
+        item = self.__queue[-1]
+        pdf_uri = item["pdf_uri"]
+        iter_count = item["iter_count"]
+        analyze_result = item["analyze_result"]
+        evaluate_result = item["evaluate_result"]
+        analyze_prompt = item["analyze_prompt"]
+        print("=======================================")
+        print(f"iter_count: {iter_count}")
+        print("=======================================")
+        print(f"pdf_uri: {pdf_uri}")
         print("=======================================")
         print(f"analyze_result: {analyze_result}")
         print("=======================================")
@@ -62,7 +82,10 @@ class InternalLog:
             d[i] = item
 
         with open(output_file_path, "w") as f:
-            json.dump(d, f, indent=2)
+            json.dump(d, f, indent=2, ensure_ascii=False)
+
+    def get_latest_prompts(self) -> dict:
+        return self.__latest_prompts
 
 
 def analyze_financial_report(
@@ -216,6 +239,56 @@ def adjust_analysis_prompt(
     return response.text
 
 
+def generalize_prompt(
+    request_id: str,
+    prompt_dict: dict,
+    model_name: str,
+    bucket_name: str,
+    output_folder: str
+) -> str:
+    # LLMを利用するのに必要なパラメーターを設定
+    vertexai.init(project=GCP_PROJECT_ID, location="us-central1")
+    model = GenerativeModel(model_name=model_name)
+    temperature = 0
+    config = GenerationConfig(
+        temperature=temperature
+    )
+    target_prompts = ""
+    for target_prompt in prompt_dict.values():
+        p = f"prompt: {target_prompt}\n"
+        target_prompts += p
+    prompt = f"""
+あなたはLLMのプロンプトを書き換えるエキスパートです。
+下記の複数のプロンプトから、汎用的な有価証券報告書を分析するためのプロンプトに書き換えてください。
+ただし、後述するルールを守って、プロンプトを出力してください。
+
+# 複数のプロンプト情報
+{target_prompts}
+
+# ルール
+・分析観点は一つに拘らず、複数の観点を出すようにしてください。
+・会社名、具体的な決算資料の数値といった企業の固有情報をプロンプトに含めないでください。
+    """
+
+    # LLMを利用して解析処理を実施
+    contents = [prompt]
+    response = model.generate_content(contents=contents, generation_config=config)
+
+    # 解析結果をログとしてGCSに出力する
+    upload_llm_log_data(
+        request_id=request_id,
+        response=response,
+        prompt=prompt,
+        model_name=model_name,
+        temperature=temperature,
+        bucket_name=bucket_name,
+        output_folder=output_folder,
+        log_name="generalize_prompt_log"
+    )
+
+    return response.text
+
+
 def upload_llm_log_data(
     request_id: str,
     response: GenerationResponse,
@@ -293,64 +366,87 @@ def repeated_safety_ratings_to_list(safety_ratings: RepeatedComposite) -> list:
 
 
 def main():
-    analyze_prompt = """
-・財務三表（損益計算書、貸借対照表、キャッシュフロー表）を分析時に利用すること。
+    default_analyze_prompt = """
+・有価証券報告書に含まれる情報を分析時に利用すること。
     """
     output_folder = os.path.join(os.path.dirname(__file__), "output", "auto_prompt_engineering_sample")
     os.makedirs(output_folder, exist_ok=True)
     internal_logger = InternalLog()
+    datetime_str = datetime.now().strftime("%Y%m%d%H%M%S")
 
-    for i in range(MAX_LOOP_COUNT):
-        print(f"{i+1}/{MAX_LOOP_COUNT} : analyze financial report...")
-        request_id = str(uuid.uuid4())
+    for pdf_file_name in PDF_URI_LIST:
+        print(f"start to analyze {pdf_file_name} file...")
+        analyze_prompt = default_analyze_prompt
+        pdf_uri = PDF_FOLDER_URI + "/" + pdf_file_name
+        for i in range(MAX_LOOP_COUNT):
+            print(f"{i+1}/{MAX_LOOP_COUNT} : analyze financial report...")
+            request_id = str(uuid.uuid4())
 
-        # 有価証券報告書の分析を行う
-        print("start to analyze the financial report...")
-        analyze_result = analyze_financial_report(
-            request_id=request_id,
-            pdf_uri=PDF_URI,
-            prompt=analyze_prompt,
-            model_name="gemini-1.5-flash",
-            bucket_name=GCS_BUCKET_NAME,
-            output_folder=output_folder
-        )
+            # 有価証券報告書の分析を行う
+            print("start to analyze the financial report...")
+            analyze_result = analyze_financial_report(
+                request_id=request_id,
+                pdf_uri=pdf_uri,
+                prompt=analyze_prompt,
+                model_name="gemini-1.5-flash",
+                bucket_name=GCS_BUCKET_NAME,
+                output_folder=output_folder
+            )
 
-        # 分析結果を評価する
-        print("start to evaluate the analysis result...")
-        evaluate_result = evaluate_analysis_result(
-            request_id=request_id,
-            pdf_uri=PDF_URI,
-            analyze_result=analyze_result,
-            model_name="gemini-1.5-flash",
-            bucket_name=GCS_BUCKET_NAME,
-            output_folder=output_folder
-        )
+            # 分析結果を評価する
+            print("start to evaluate the analysis result...")
+            evaluate_result = evaluate_analysis_result(
+                request_id=request_id,
+                pdf_uri=pdf_uri,
+                analyze_result=analyze_result,
+                model_name="gemini-1.5-flash",
+                bucket_name=GCS_BUCKET_NAME,
+                output_folder=output_folder
+            )
 
-        # プロンプトを書き換える
-        print("start to recreate the analysis prompt...")
-        analyze_prompt = adjust_analysis_prompt(
-            request_id=request_id,
-            evaluator_result=evaluate_result,
-            analyze_prompt=analyze_prompt,
-            model_name="gemini-1.5-flash",
-            bucket_name=GCS_BUCKET_NAME,
-            output_folder=output_folder
-        )
+            # プロンプトを書き換える
+            print("start to recreate the analysis prompt...")
+            analyze_prompt = adjust_analysis_prompt(
+                request_id=request_id,
+                evaluator_result=evaluate_result,
+                analyze_prompt=analyze_prompt,
+                model_name="gemini-1.5-flash",
+                bucket_name=GCS_BUCKET_NAME,
+                output_folder=output_folder
+            )
 
-        # 1イテレーション分の結果を出力する
-        internal_logger.set_log(
-            analyze_result=analyze_result,
-            evaluate_result=evaluate_result,
-            analyze_prompt=analyze_prompt
-        )
-        internal_logger.print_log(index=i)
+            # 1イテレーション分の結果を出力する
+            internal_logger.set_log(
+                pdf_uri=pdf_uri,
+                iter_count=i,
+                analyze_result=analyze_result,
+                evaluate_result=evaluate_result,
+                analyze_prompt=analyze_prompt
+            )
+            internal_logger.print_latest_log()
 
-        if "FINISH" in analyze_prompt:
-            print("analyze_prompt is end! break")
-            break
+            if "FINISH" in analyze_prompt:
+                print("analyze_prompt is end! break")
+                break
+
+    # 全てのプロンプト結果を元に汎用的なプロンプトを作り直す
+    request_id = str(uuid.uuid4())
+    final_prompt = generalize_prompt(
+        request_id=request_id,
+        prompt_dict=internal_logger.get_latest_prompts(),
+        model_name="gemini-1.5-flash",
+        bucket_name=GCS_BUCKET_NAME,
+        output_folder=output_folder
+    )
+    print("=======================")
+    print(f"final prompt: {final_prompt}")
+    print("=======================")
+    internal_logger.set_final_analysis_prompt(prompt=final_prompt)
 
     # ログをjsonファイルとして出力
-    internal_logger.save_log_into_json(output_file_path=os.path.join(output_folder, "internal_log.json"))
+    internal_logger.save_log_into_json(
+        output_file_path=os.path.join(output_folder, f"internal_log_{datetime_str}.json")
+    )
 
 
 if __name__ == "__main__":
