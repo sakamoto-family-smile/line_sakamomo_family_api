@@ -23,10 +23,14 @@ from proto.marshal.collections import RepeatedComposite
 import uuid
 
 
+# サンプルコード実行時には下記パラメーターを設定してください
 GCP_PROJECT_ID = "xxx"
-GCS_BUCKET_NAME = ""
-PDF_URI = ""
-MAX_LOOP_COUNT = 5
+GCS_BUCKET_NAME = "xxx"
+PDF_FOLDER_URI = f"gs://{GCS_BUCKET_NAME}/sample"
+PDF_FILE_NAME_LIST = [
+    "aaaa.pdf", "bbbb.pdf"
+]
+MAX_LOOP_COUNT = 3
 
 
 class InternalLog:
