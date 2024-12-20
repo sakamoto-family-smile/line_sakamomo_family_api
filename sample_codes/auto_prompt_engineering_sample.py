@@ -3,6 +3,16 @@
 検証してみたものとなります.
 一般的なフレームワークを利用していないため、今後はフレームワークを試しに利用してみたいと考えています.
 
+下記の4つのLLMコンポーネントを用いて、プロンプトを再生成しています。
+- Generator
+    - 有価証券報告書の分析結果を生成
+- Evaluator
+    - 有価証券報告書の分析結果が妥当かを評価
+- Rewriter
+    - 分析結果から、Generatorのプロンプトを書き換える
+- Generalizer
+    - 複数の有価証券報告書の分析を行うプロンプト群を読み込み、プロンプトを汎用化
+
 本サンプルコードを使う前に下記セットアップを実施してください。
 1. GCPプロジェクトの作成
 2. project idをGCP_PROJECT_IDに設定
@@ -93,7 +103,7 @@ class InternalLog:
         return self.__latest_prompts
 
 
-def analyze_financial_report(
+def generate_analysis_result(
     request_id: str,
     pdf_uri: str,
     prompt: str,
@@ -196,7 +206,7 @@ def evaluate_analysis_result(
     return response.text
 
 
-def adjust_analysis_prompt(
+def rewrite_analysis_prompt(
     request_id: str,
     evaluator_result: str,
     analyze_prompt: str,
@@ -244,7 +254,7 @@ def adjust_analysis_prompt(
     return response.text
 
 
-def generalize_prompt(
+def generalize_analysis_prompt(
     request_id: str,
     prompt_dict: dict,
     model_name: str,
@@ -389,7 +399,7 @@ def main():
 
             # 有価証券報告書の分析を行う
             print("start to analyze the financial report...")
-            analyze_result = analyze_financial_report(
+            analyze_result = generate_analysis_result(
                 request_id=request_id,
                 pdf_uri=pdf_uri,
                 prompt=analyze_prompt,
@@ -411,7 +421,7 @@ def main():
 
             # プロンプトを書き換える
             print("start to recreate the analysis prompt...")
-            analyze_prompt = adjust_analysis_prompt(
+            analyze_prompt = rewrite_analysis_prompt(
                 request_id=request_id,
                 evaluator_result=evaluate_result,
                 analyze_prompt=analyze_prompt,
@@ -436,7 +446,7 @@ def main():
 
     # 全てのプロンプト結果を元に汎用的なプロンプトを作り直す
     request_id = str(uuid.uuid4())
-    final_prompt = generalize_prompt(
+    final_prompt = generalize_analysis_prompt(
         request_id=request_id,
         prompt_dict=internal_logger.get_latest_prompts(),
         model_name="gemini-1.5-flash",
