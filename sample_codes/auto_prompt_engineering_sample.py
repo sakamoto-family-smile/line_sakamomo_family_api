@@ -31,6 +31,7 @@ from datetime import datetime
 from google.cloud import storage
 from proto.marshal.collections import RepeatedComposite
 import uuid
+from typing import List
 
 
 # サンプルコード実行時には下記パラメーターを設定してください
@@ -380,6 +381,14 @@ def repeated_safety_ratings_to_list(safety_ratings: RepeatedComposite) -> list:
     return safety_rating_li
 
 
+def get_pdf_file_uri_list_in_gcs() -> List[str]:
+    storage_client = storage.Client(project=GCP_PROJECT_ID)
+    bucket = storage_client.bucket(GCS_BUCKET_NAME)
+    files = bucket.list_blobs(prefix=PDF_FOLDER_NAME + "/")
+    file_uri_list = [f"gs://{GCS_BUCKET_NAME}/{file.name}" for file in files]
+    return list(filter(lambda x: x.endswith(".pdf"), file_uri_list))
+
+
 def main():
     default_analyze_prompt = """
 ・有価証券報告書に含まれる情報を分析時に利用すること。
@@ -429,11 +438,17 @@ ESGの観点から、企業の持続可能性を評価してください。
     os.makedirs(output_folder, exist_ok=True)
     internal_logger = InternalLog()
     datetime_str = datetime.now().strftime("%Y%m%d%H%M%S")
+    display_analysis_log = False
 
-    for pdf_file_name in PDF_FILE_NAME_LIST:
-        print(f"start to analyze {pdf_file_name} file...")
+    # gcs上のフォルダからPDFのファイルリストを取得する
+    pdf_file_uri_list = get_pdf_file_uri_list_in_gcs()
+
+    # 有価証券報告書の解析処理の実施
+    print(f"target document count of analysis is {len(pdf_file_uri_list)}")
+    for i, pdf_file_uri in enumerate(pdf_file_uri_list):
+        print(f"{i+1}/{len(pdf_file_uri_list)} : start to analyze {pdf_file_uri} file...")
         analyze_prompt = default_analyze_prompt
-        pdf_uri = PDF_FOLDER_URI + "/" + pdf_file_name
+        pdf_uri = pdf_file_uri
         for i in range(MAX_LOOP_COUNT):
             print(f"{i+1}/{MAX_LOOP_COUNT} : analyze financial report...")
             request_id = str(uuid.uuid4())
@@ -479,7 +494,8 @@ ESGの観点から、企業の持続可能性を評価してください。
                 evaluate_result=evaluate_result,
                 analyze_prompt=analyze_prompt
             )
-            internal_logger.print_latest_log()
+            if display_analysis_log:
+                internal_logger.print_latest_log()
 
             if "FINISH" in analyze_prompt:
                 print("analyze_prompt is end! break")
