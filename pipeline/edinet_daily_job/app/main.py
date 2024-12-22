@@ -1,9 +1,40 @@
 import os
 from dotenv import load_dotenv
 from google.cloud import bigquery
+from google.api_core.exceptions import NotFound
 from datetime import datetime, timedelta
 
 from edinet_wrapper import EdinetWrapper
+
+
+def enable_to_delete_record_of_table(client, table_id):
+    """
+    指定されたテーブル
+
+    Args:
+    client: BigQueryクライアントオブジェクト
+    table_id: テーブルID
+
+    Returns:
+    bool: テーブルのレコード削除が可能なら、True. それ以外はFalse
+    """
+    try:
+        client.get_table(table_id)
+    except NotFound:
+        return False
+
+    try:
+        query = f"""
+        SELECT
+            COUNT(*) AS num_rows
+        FROM
+            `{table_id}`
+        """
+        query_job = client.query(query)
+        _ = query_job.result()
+        return True
+    except Exception:
+        return False
 
 
 def main(duration_days: int,
@@ -12,7 +43,7 @@ def main(duration_days: int,
          target_date: datetime,
          force_delete_of_target_date: bool):
     # edinetから指定した日数分の有価証券報告書のリストをDataFrameで取得する
-    print("start to get documents list from edinet. debug hogehoge")
+    print("start to get documents list from edinet.")
     edinet = EdinetWrapper(
         api_key=api_key,
         output_folder=os.path.join(os.path.dirname(__file__), "output")
@@ -32,13 +63,16 @@ def main(duration_days: int,
         print(f"start date is {start_date}, end_date is {end_date}")
 
         client = bigquery.Client()
-        where_clause = f"submitDateTime BETWEEN '{start_date}' AND '{end_date}'"
-        delete_query = f"""
-            DELETE FROM `{table_id}`
-            WHERE {where_clause}
-        """
-        query_job = client.query(delete_query)
-        query_job.result()
+
+        # 初回実行時の場合は、重複レコードの削除処理をスキップする
+        if enable_to_delete_record_of_table(client=client, table_id=table_id):
+            where_clause = f"submitDateTime BETWEEN '{start_date}' AND '{end_date}'"
+            delete_query = f"""
+                DELETE FROM `{table_id}`
+                WHERE {where_clause}
+            """
+            query_job = client.query(delete_query)
+            query_job.result()
 
     # 次にEDINETから取得したデータをbigqueryに挿入する
     print("start to insert documents list into bigquery")
