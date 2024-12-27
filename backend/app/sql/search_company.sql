@@ -3,7 +3,7 @@ select
     filerName,
     docDescription
 from
-    `line_sakamomo_family_api.edinet_document_metadata`
+    `family_data.edinet_document_metadata`
 where
     CONTAINS_SUBSTR(filerName, "{company_name}")
     AND

@@ -3,7 +3,6 @@ import json
 import os
 
 import pyrebase.pyrebase
-import streamlit as st
 
 
 @dataclasses.dataclass

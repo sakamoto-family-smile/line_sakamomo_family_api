@@ -1,6 +1,6 @@
 GOOGLE_REGION=asia-northeast1
 DOCKER_BASE_URL=${GOOGLE_REGION}-docker.pkg.dev
-DOCKER_URL=${DOCKER_BASE_URL}/${GOOGLE_CLOUD_PROJECT}/line-sakamomo-family-api/front
+DOCKER_URL=${DOCKER_BASE_URL}/${GOOGLE_CLOUD_PROJECT}/sakamomo-family-api/front
 SERVICE_NAME=sakamomo-family-web-app
 WEB_PORT=8501
 

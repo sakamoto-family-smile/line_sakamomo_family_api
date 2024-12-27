@@ -1,7 +1,7 @@
 GOOGLE_REGION=asia-northeast1
 DOCKER_BASE_URL=${GOOGLE_REGION}-docker.pkg.dev
-DOCKER_URL=${DOCKER_BASE_URL}/${GOOGLE_CLOUD_PROJECT}/line-sakamomo-family-api/api
-SERVICE_NAME=line-sakamomo-family-api
+DOCKER_URL=${DOCKER_BASE_URL}/${GOOGLE_CLOUD_PROJECT}/sakamomo-family-api/api
+SERVICE_NAME=sakamomo-family-api
 API_PORT=8080
 LANGCHAIN_ENDPOINT=https://api.smith.langchain.com
 
@@ -23,7 +23,10 @@ deploy_api:
 		--update-env-vars LANGCHAIN_ENDPOINT=${LANGCHAIN_ENDPOINT},LANGCHAIN_API_KEY=${LANGCHAIN_API_KEY},LANGCHAIN_TRACING_V2=true \
 		--update-env-vars GOOGLE_API_KEY=${GOOGLE_API_KEY},GOOGLE_CSE_ID=${GOOGLE_CSE_ID} \
 		--update-env-vars EDINET_API_KEY=${EDINET_API_KEY} \
-		--port ${API_PORT}
+		--update-env-vars GCS_LOG_BUCKET_NAME=${GCS_LOG_BUCKET_NAME} \
+		--port ${API_PORT} \
+		--allow-unauthenticated \
+		--ingress internal-and-cloud-load-balancing
 
 deploy_public_api:
 	gcloud run deploy ${SERVICE_NAME} \
@@ -33,6 +36,7 @@ deploy_public_api:
 		--update-env-vars LANGCHAIN_ENDPOINT=${LANGCHAIN_ENDPOINT},LANGCHAIN_API_KEY=${LANGCHAIN_API_KEY},LANGCHAIN_TRACING_V2=true \
 		--update-env-vars GOOGLE_API_KEY=${GOOGLE_API_KEY},GOOGLE_CSE_ID=${GOOGLE_CSE_ID} \
 		--update-env-vars EDINET_API_KEY=${EDINET_API_KEY} \
+		--update-env-vars GCS_LOG_BUCKET_NAME=${GCS_LOG_BUCKET_NAME} \
 		--port ${API_PORT} \
 		--allow-unauthenticated
 
@@ -51,4 +55,4 @@ format:
 	pysen run format
 
 debug_line_request:
-	curl -X POST https://line-sakamomo-family-api-m544onxfdq-an.a.run.app/line_callback -H "x-line-signature:hoge" --data "data=hoge"
+	curl -X POST https://sakamomo-family-api-m544onxfdq-an.a.run.app/line_callback -H "x-line-signature:hoge" --data "data=hoge"

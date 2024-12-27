@@ -1,8 +1,8 @@
 GOOGLE_REGION=asia-northeast1
 DOCKER_BASE_URL=${GOOGLE_REGION}-docker.pkg.dev
-DOCKER_URL=${DOCKER_BASE_URL}/${GOOGLE_CLOUD_PROJECT}/line-sakamomo-family-api/edinet_job
+DOCKER_URL=${DOCKER_BASE_URL}/${GOOGLE_CLOUD_PROJECT}/sakamomo-family-api/edinet_job
 JOB_NAME=sakamomo-family-job
-DURATION_DAYS=10
+DURATION_DAYS=365
 CPU=4
 MEMORY=8
 MAX_RETRY_COUNT=0

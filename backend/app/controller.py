@@ -44,7 +44,7 @@ class Controller:
         self.__edinet_wrapper = EdinetWrapper(api_key=os.environ["EDINET_API_KEY"], output_folder=self.__output_folder)
 
         # 決算書を分析するためのAgentを初期化
-        self.__financial_agent_config = FinancialAgentConfig(llm_model_name="gemini-1.5-flash-001")
+        self.__financial_agent_config = FinancialAgentConfig(llm_model_name="gemini-1.5-flash-001", log_bucket_name=os.environ["GCS_LOG_BUCKET_NAME"])
         self.__financial_agent = FinancialReportAgent(config=self.__financial_agent_config)
 
     # TODO : 内部で例外が発生した際は例外を返すようにした方がよさそう.

@@ -50,7 +50,7 @@ class MainAgentConfig(BaseModel):
 class FinancialAgentConfig(BaseModel):
     llm_model_name: str = "gemini-1.5-flash"
     temperature: int = 0
-    log_bucket_name: str = "sakamomo_family_api"
+    log_bucket_name: str = "sakamomo_family_service"
     log_base_folder: str = "log"
     debug_mode: bool = False
 
