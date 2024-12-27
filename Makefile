@@ -12,3 +12,9 @@ export_infra:
 		--output output/ \
 		--on-error continue \
 		-v
+
+export_infra_terraform:
+	gcloud beta resource-config bulk-export \
+		--resource-format=terraform \
+		--project=${GOOGLE_CLOUD_PROJECT} \
+		>> gcp_resources.tf
