@@ -8,7 +8,8 @@ variable "use_gcp_service_list" {
     "cloudscheduler.googleapis.com",
     "identitytoolkit.googleapis.com",
     "iap.googleapis.com",
-    "domains.googleapis.com"
+    "domains.googleapis.com",
+    "dns.googleapis.com"
   ]
 }
 
