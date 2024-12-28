@@ -49,8 +49,7 @@ register_job_scheduler:
 		--uri="https://${GOOGLE_REGION}-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/${GOOGLE_CLOUD_PROJECT}/jobs/${JOB_NAME}:run" \
 		--http-method POST \
 		--time-zone=Asia/Tokyo \
-		--headers=${JOB_HEADERS} \
-		--oauth-service-account-email=${JOB_SERVICE_ACCOUNT}
+		--headers=${JOB_HEADERS}
 
 delete_job_scheduler:
 	gcloud scheduler jobs delete ${JOB_NAME} --location=${GOOGLE_REGION}
