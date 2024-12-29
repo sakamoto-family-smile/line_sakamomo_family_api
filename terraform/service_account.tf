@@ -67,3 +67,44 @@ resource "google_project_iam_member" "service_api_backend_iam" {
   role    = each.value
   member  = "serviceAccount:${google_service_account.service_api_backend.email}"
 }
+
+resource "google_service_account" "service_web_frontend" {
+  project      = var.google_cloud_project
+  account_id   = "service-web-frontend"
+  description  = "WebFrontendのCloudRunに設定するSA"
+  display_name = "service-web-frontend"
+}
+
+variable "service_web_frontend_roles" {
+  type = list(string)
+  default = [
+    "roles/editor"
+  ]
+}
+
+resource "google_project_iam_member" "service_web_frontend_iam" {
+  for_each = toset(var.service_web_frontend_roles)
+  project = var.google_cloud_project
+  role    = each.value
+  member  = "serviceAccount:${google_service_account.service_web_frontend.email}"
+}
+resource "google_service_account" "edinet_job" {
+  project      = var.google_cloud_project
+  account_id   = "edinet-job"
+  description  = "EDINETのデータ取得を行うジョブに設定するSA"
+  display_name = "edinet-job"
+}
+
+variable "edinet_job_roles" {
+  type = list(string)
+  default = [
+    "roles/editor"
+  ]
+}
+
+resource "google_project_iam_member" "edinet_job_iam" {
+  for_each = toset(var.edinet_job_roles)
+  project = var.google_cloud_project
+  role    = each.value
+  member  = "serviceAccount:${google_service_account.edinet_job.email}"
+}

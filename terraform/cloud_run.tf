@@ -141,3 +141,38 @@ resource "google_cloud_run_v2_service" "sakamomo_family_web_app" {
     type    = "TRAFFIC_TARGET_ALLOCATION_TYPE_LATEST"
   }
 }
+
+resource "google_cloud_run_v2_job" "sakamomo_family_job" {
+  client         = "gcloud"
+  client_version = "484.0.0"
+  launch_stage   = "GA"
+  location       = var.google_cloud_region
+  name           = "sakamomo-family-job"
+  project        = var.google_cloud_project
+  template {
+    task_count = 1
+    template {
+      containers {
+        env {
+          name  = "EDINET_API_KEY"
+          value = var.edinet_api_key
+        }
+        env {
+          name  = "TABLE_ID"
+          value = format("%s.%s.%s", var.google_cloud_project, var.bq_dataset_name, google_bigquery_table.edinet_document_metadata.table_id)
+        }
+        image = format("%s-docker.pkg.dev/%s/sakamomo-family-api/edinet_job", var.google_cloud_region, var.google_cloud_project)
+        resources {
+          limits = {
+            cpu    = "4"
+            memory = "8G"
+          }
+        }
+      }
+      execution_environment = "EXECUTION_ENVIRONMENT_GEN2"
+      max_retries           = 0
+      service_account       = google_service_account.edinet_job.email
+      timeout               = "3600s"
+    }
+  }
+}
