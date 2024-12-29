@@ -59,3 +59,27 @@ variable "google_cse_id" {
 variable "edinet_api_key" {
     type = string
 }
+
+variable "backend_service_domain_name" {
+    type = string
+}
+
+variable "backend_service_domain_phone_number" {
+    type = string
+}
+
+variable "backend_service_domain_email" {
+    type = string
+}
+
+variable "backend_service_domain_postal_address" {
+    type = map(any)
+    default = {
+        region_code         = ""
+        postal_code         = ""
+        administrative_area = ""
+        locality            = ""
+        address_line        = "" # TODO : リスト形式で設定する必要がある
+        recipient           = "" # TODO : リスト形式で設定する必要がある
+    }
+}
