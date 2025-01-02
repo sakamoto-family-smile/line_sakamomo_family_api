@@ -33,7 +33,7 @@ resource "google_dns_record_set" "A1" {
   type         = "A"
   ttl          = 300
 
-  rrdatas = ["8.8.8.8"] # TODO : ipを作成して、設定する
+  rrdatas = [google_compute_global_address.sakamomo_family_serivce_lb_ip.address]
 }
 
 resource "google_dns_record_set" "A2" {
@@ -42,5 +42,5 @@ resource "google_dns_record_set" "A2" {
   type         = "A"
   ttl          = 300
 
-  rrdatas = ["8.8.8.8"] # TODO : ipを作成して、設定する
+  rrdatas = [google_compute_global_address.sakamomo_family_serivce_lb_ip.address]
 }

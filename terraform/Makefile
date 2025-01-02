@@ -1,5 +1,5 @@
 initialize_plan:
-	terraform plan --target=google_artifact_registry_repository.sakamomo_family_api --target=google_project_service.gcp_service_apis
+	terraform plan --target=google_artifact_registry_repository.sakamomo_family_api --target=google_project_service.gcp_service_apis --target=google_clouddomains_registration.backend_service_domain
 
 initialize_apply:
-	terraform apply --target=google_artifact_registry_repository.sakamomo_family_api --target=google_project_service.gcp_service_apis
+	terraform apply --target=google_artifact_registry_repository.sakamomo_family_api --target=google_project_service.gcp_service_apis --target=google_clouddomains_registration.backend_service_domain
