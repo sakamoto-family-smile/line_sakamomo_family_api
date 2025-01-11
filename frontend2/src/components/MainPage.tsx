@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { requestFinancialDocumentList, requestUploadFinancialReport, requestAnalyzeFinancialDocument, requestDownloadFinancialDocument } from './backend_util';
 import { useNavigate } from 'react-router-dom';
 
-const TOKEN_KEY = "authenticated";
+const AUTH_TOKEN_KEY = 'authToken';
+const AUTH_TOKEN_EXPIRY_KEY = 'authTokenExpiry';
 
 interface DocumentItem {
     filer_name: string;
@@ -17,12 +18,27 @@ interface DownloadFile {
 
 const handleTokenExpiration = () => {
     alert("Token Expired! Please relogin.");
-    sessionStorage.removeItem(TOKEN_KEY);
+    sessionStorage.removeItem(AUTH_TOKEN_KEY);
+    sessionStorage.removeItem(AUTH_TOKEN_EXPIRY_KEY);
     window.location.href = '/login';
 };
 
 const checkAuthKey = () => {
-    return !!sessionStorage.getItem(TOKEN_KEY);
+    const token = sessionStorage.getItem(AUTH_TOKEN_KEY);
+    const expiryTime = sessionStorage.getItem(AUTH_TOKEN_EXPIRY_KEY);
+
+    // debug
+    console.log("token = " + token)
+    console.log("expiryTime = " + expiryTime)
+
+    if (!token || !expiryTime) {
+        // debug
+        console.log("checkAuthKey is false")
+
+        return false;
+    }
+
+    return new Date().getTime() < parseInt(expiryTime, 10);
 };
 
 const setDocumentList = (documents: DocumentItem[]) => {
