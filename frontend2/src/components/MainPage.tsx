@@ -38,7 +38,13 @@ const checkAuthKey = () => {
         return false;
     }
 
-    return new Date().getTime() < parseInt(expiryTime, 10);
+    const currentTime = new Date().getTime()
+
+    // debug
+    console.log("current time = " + currentTime)
+    console.log("parse time = " + parseInt(expiryTime, 10))
+
+    return currentTime < parseInt(expiryTime, 10);
 };
 
 const setDocumentList = (documents: DocumentItem[]) => {
@@ -194,6 +200,9 @@ const UI: React.FC = () => {
     const navigate = useNavigate();
     useEffect(() => {
         if (!checkAuthKey()) {
+            // debug
+            console.log("UI move login page")
+
             navigate('/login');
         }
     }, [navigate]);

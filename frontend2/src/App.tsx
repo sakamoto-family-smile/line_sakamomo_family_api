@@ -11,6 +11,9 @@ const App: React.FC = () => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setIsAuthenticated(!!user);
+
+      // debug
+      console.log("App.tsx : isAuthenticated = ", isAuthenticated);
     });
     return () => unsubscribe();
   }, [auth]);
@@ -19,7 +22,7 @@ const App: React.FC = () => {
     <Router>
       <Routes>
         <Route path="/login" element={<Login />} />
-        <Route path="/" element={isAuthenticated ? <UI /> : <Navigate to="/login" />} />
+        <Route path="/" element={<UI />} />
       </Routes>
     </Router>
   );

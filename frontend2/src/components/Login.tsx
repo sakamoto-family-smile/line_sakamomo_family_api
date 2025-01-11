@@ -25,11 +25,11 @@ const Login: React.FC = () => {
     setError('');
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const token = await userCredential.user.getIdTokenResult();
-      sessionStorage.setItem('authToken', token.token);
+      const tokenResult = await userCredential.user.getIdTokenResult();
+      sessionStorage.setItem('authToken', tokenResult.token);
       // The 'exp' claim in the token represents the expiration time in seconds since the Unix epoch.
-      sessionStorage.setItem('authTokenExpiry', String(token.expirationTime));
-      // Redirect to the top page after successful login
+      sessionStorage.setItem('authTokenExpiry', String(Number(tokenResult.claims.exp) * 1000)); // Convert seconds to milliseconds for Date comparison
+      // Redirect to the main page after successful login
       navigate('/');
     } catch (error: any) {
       setError(error.message);
