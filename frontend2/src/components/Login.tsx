@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
+import { useNavigate } from 'react-router-dom';
 
 // Firebase configuration
 const firebaseConfig = {
@@ -17,14 +18,15 @@ const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const navigate = useNavigate();
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setError('');
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      // Redirect to the string input page after successful login
-      window.location.href = '/string-input';
+      // Redirect to the main page after successful login
+      navigate('/');
     } catch (error: any) {
       setError(error.message);
     }
