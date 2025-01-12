@@ -1,3 +1,4 @@
+import styles from './MainPage.module.css';
 import React, { useState, useEffect } from 'react';
 import { requestFinancialDocumentList, requestUploadFinancialReport, requestAnalyzeFinancialDocument, requestDownloadFinancialDocument } from './backend_util';
 import { useNavigate } from 'react-router-dom';
@@ -26,24 +27,11 @@ const handleTokenExpiration = () => {
 const checkAuthKey = () => {
     const token = sessionStorage.getItem(AUTH_TOKEN_KEY);
     const expiryTime = sessionStorage.getItem(AUTH_TOKEN_EXPIRY_KEY);
-
-    // debug
-    console.log("token = " + token)
-    console.log("expiryTime = " + expiryTime)
-
     if (!token || !expiryTime) {
-        // debug
-        console.log("checkAuthKey is false")
-
         return false;
     }
 
     const currentTime = new Date().getTime()
-
-    // debug
-    console.log("current time = " + currentTime)
-    console.log("parse time = " + parseInt(expiryTime, 10))
-
     return currentTime < parseInt(expiryTime, 10);
 };
 
@@ -121,15 +109,17 @@ const FinancialReportAnalysisPage: React.FC = () => {
     };
 
     return (
-        <div>
+        <div className={styles.financial_report_section}>
             <h2>Analysis Financial Report</h2>
-            <input
-                type="text"
-                placeholder="企業名"
-                value={companyName}
-                onChange={(e) => setCompanyName(e.target.value)}
-            />
-            <button onClick={handleSearch}>検索</button>
+            <div className={styles.input_group}>
+                <input
+                    type="text"
+                    placeholder="企業名"
+                    value={companyName}
+                    onChange={(e) => setCompanyName(e.target.value)}
+                />
+                <button onClick={handleSearch} className={styles.search_button}>検索</button>
+            </div>
 
             {documentList.length > 0 && (
                 <div>
@@ -168,14 +158,14 @@ const FinancialReportAnalysisPage: React.FC = () => {
                     <button onClick={handleAnalyze}>解析開始</button>
 
                     {analysisResult && (
-                        <div>
+                        <div className={styles.analysis_result}>
                             <h3>解析結果</h3>
                             <p>{analysisResult}</p>
                         </div>
                     )}
 
                     {downloadFile && (
-                        <button onClick={handleDownload}>PDFのダウンロード</button>
+                        <button onClick={handleDownload} className={styles.download_button}>PDFのダウンロード</button>
                     )}
                 </div>
             )}
@@ -187,9 +177,9 @@ const MainPage: React.FC = () => {
     const [activeTab, setActiveTab] = useState('financial_report');
 
     return (
-        <div>
+        <div className={styles.main_page_container}>
             <h1>Sakamomo-Family-App</h1>
-            <button onClick={() => setActiveTab('financial_report')}>決算書分析</button>
+            <button onClick={() => setActiveTab('financial_report')} className={styles.search_button}>決算書分析</button>
 
             {activeTab === 'financial_report' && <FinancialReportAnalysisPage />}
         </div>
@@ -200,15 +190,12 @@ const UI: React.FC = () => {
     const navigate = useNavigate();
     useEffect(() => {
         if (!checkAuthKey()) {
-            // debug
-            console.log("UI move login page")
-
             navigate('/login');
         }
     }, [navigate]);
 
     return (
-        <div>
+        <div style={{ height: '100vh' }}>
             <MainPage />
         </div>
     );

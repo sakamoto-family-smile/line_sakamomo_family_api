@@ -11,9 +11,6 @@ const App: React.FC = () => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setIsAuthenticated(!!user);
-
-      // debug
-      console.log("App.tsx : isAuthenticated = ", isAuthenticated);
     });
     return () => unsubscribe();
   }, [auth]);
