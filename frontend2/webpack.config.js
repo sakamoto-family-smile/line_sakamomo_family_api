@@ -94,6 +94,7 @@ module.exports = {
     }),
     new TypedCssModulesPlugin({
       globPattern: 'src/**/*.module.css',
+      camelCase: true,
     }),
   ],
 };

@@ -1,6 +1,4 @@
 include .env
-start: docker-run
-
 docker-build:
 	docker build -t frontend2 .
 
@@ -13,3 +11,9 @@ docker-run: docker-build
 
 build:
 	npm run build
+
+run: export REACT_APP_FIREBASE_API_KEY := ${REACT_APP_FIREBASE_API_KEY}
+run: export REACT_APP_FIREBASE_AUTH_DOMAIN := ${REACT_APP_FIREBASE_AUTH_DOMAIN}
+run: export REACT_APP_FIREBASE_PROJECT_ID := ${REACT_APP_FIREBASE_PROJECT_ID}
+run: build
+	npm start

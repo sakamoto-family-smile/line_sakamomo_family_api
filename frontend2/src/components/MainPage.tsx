@@ -1,4 +1,4 @@
-import styles from './MainPage.module.css';
+import * as styles from './MainPage.module.css';
 import React, { useState, useEffect } from 'react';
 import { requestFinancialDocumentList, requestUploadFinancialReport, requestAnalyzeFinancialDocument, requestDownloadFinancialDocument } from './backend_util';
 import { useNavigate } from 'react-router-dom';
@@ -109,16 +109,16 @@ const FinancialReportAnalysisPage: React.FC = () => {
     };
 
     return (
-        <div className={styles.financial_report_section}>
+        <div className={styles.financialReportSection}>
             <h2>Analysis Financial Report</h2>
-            <div className={styles.input_group}>
+            <div className={styles.inputGroup}>
                 <input
                     type="text"
                     placeholder="企業名"
                     value={companyName}
                     onChange={(e) => setCompanyName(e.target.value)}
                 />
-                <button onClick={handleSearch} className={styles.search_button}>検索</button>
+                <button onClick={handleSearch} className={styles.searchButton}>検索</button>
             </div>
 
             {documentList.length > 0 && (
@@ -158,14 +158,14 @@ const FinancialReportAnalysisPage: React.FC = () => {
                     <button onClick={handleAnalyze}>解析開始</button>
 
                     {analysisResult && (
-                        <div className={styles.analysis_result}>
+                        <div className={styles.analysisResult}>
                             <h3>解析結果</h3>
                             <p>{analysisResult}</p>
                         </div>
                     )}
 
                     {downloadFile && (
-                        <button onClick={handleDownload} className={styles.download_button}>PDFのダウンロード</button>
+                        <button onClick={handleDownload} className={styles.downloadButton}>PDFのダウンロード</button>
                     )}
                 </div>
             )}
@@ -177,9 +177,9 @@ const MainPage: React.FC = () => {
     const [activeTab, setActiveTab] = useState('financial_report');
 
     return (
-        <div className={styles.main_page_container}>
+        <div className={styles.mainPageContainer}>
             <h1>Sakamomo-Family-App</h1>
-            <button onClick={() => setActiveTab('financial_report')} className={styles.search_button}>決算書分析</button>
+            <button onClick={() => setActiveTab('financial_report')} className={styles.searchButton}>決算書分析</button>
 
             {activeTab === 'financial_report' && <FinancialReportAnalysisPage />}
         </div>
