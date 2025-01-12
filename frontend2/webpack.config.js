@@ -91,6 +91,9 @@ module.exports = {
       'process.env.REACT_APP_FIREBASE_PROJECT_ID': JSON.stringify(
         process.env.REACT_APP_FIREBASE_PROJECT_ID
       ),
+      'process.env.IAP_BACKEND_URL': JSON.stringify(
+        process.env.IAP_BACKEND_URL
+      )
     }),
     new TypedCssModulesPlugin({
       globPattern: 'src/**/*.module.css',

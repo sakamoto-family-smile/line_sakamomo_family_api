@@ -1,6 +1,8 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:8000'; // Replace with your actual API base URL
+const backendConfig = {
+  api_base_url: process.env.IAP_BACKEND_URL
+}
 
 const handleApiError = (error: any) => {
     console.error("API Error:", error);
@@ -12,36 +14,48 @@ const handleApiError = (error: any) => {
     return Promise.reject(error);
 };
 
-export const requestFinancialDocumentList = async (companyName: string) => {
+export const requestFinancialDocumentList = async (companyName: string, idToken: string) => {
     try {
-        const response = await axios.get(`${API_BASE_URL}/financial_documents/?company_name=${companyName}`);
+        const response = await axios.get(`${backendConfig.api_base_url}/financial_documents/?company_name=${companyName}`, {
+            headers: {
+                Authorization: `Bearer ${idToken}`,
+            },
+        });
         return response.data;
     } catch (error) {
         return handleApiError(error);
     }
 };
 
-export const requestUploadFinancialReport = async (docId: string) => {
+export const requestUploadFinancialReport = async (docId: string, idToken: string) => {
     try {
-        const response = await axios.post(`${API_BASE_URL}/upload_financial_report/`, { doc_id: docId });
+        const response = await axios.post(`${backendConfig.api_base_url}/upload_financial_report/`, { doc_id: docId }, {
+            headers: {
+                Authorization: `Bearer ${idToken}`,
+            },
+        });
         return response.data;
     } catch (error) {
         return handleApiError(error);
     }
 };
 
-export const requestAnalyzeFinancialDocument = async (gcsUri: string) => {
+export const requestAnalyzeFinancialDocument = async (gcsUri: string, idToken: string) => {
     try {
-        const response = await axios.post(`${API_BASE_URL}/analyze_financial_document/`, { gcs_uri: gcsUri });
+        const response = await axios.post(`${backendConfig.api_base_url}/analyze_financial_document/`, { gcs_uri: gcsUri }, {
+            headers: {
+                Authorization: `Bearer ${idToken}`,
+            },
+        });
         return response.data;
     } catch (error) {
         return handleApiError(error);
     }
 };
 
-export const requestDownloadFinancialDocument = async (gcsUri: string) => {
+export const requestDownloadFinancialDocument = async (gcsUri: string, idToken: string) => {
     try {
-        const response = await axios.post(`${API_BASE_URL}/download_financial_document/`, { gcs_uri: gcsUri }, { responseType: 'blob' });
+        const response = await axios.post(`${backendConfig.api_base_url}/download_financial_document/`, { gcs_uri: gcsUri }, { responseType: 'blob', headers: { Authorization: `Bearer ${idToken}` } });
         return response.data;
     } catch (error) {
         return handleApiError(error);

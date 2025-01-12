@@ -66,8 +66,13 @@ const FinancialReportAnalysisPage: React.FC = () => {
     }, []);
 
     const handleSearch = async () => {
+        const idToken = sessionStorage.getItem(AUTH_TOKEN_KEY);
+        if (!idToken) {
+            handleTokenExpiration();
+            return;
+        }
         try {
-            const data = await requestFinancialDocumentList(companyName);
+            const data = await requestFinancialDocumentList(companyName, idToken);
             setDocumentListState(data.document_list);
             setDocumentList(data.document_list);
         } catch (error) {
@@ -76,17 +81,22 @@ const FinancialReportAnalysisPage: React.FC = () => {
     };
 
     const handleAnalyze = async () => {
+        const idToken = sessionStorage.getItem(AUTH_TOKEN_KEY);
+        if (!idToken) {
+            handleTokenExpiration();
+            return;
+        }
         if (selectedDocument) {
             try {
                 const document = documentList.find(doc => `${doc.filer_name}_${doc.document_description}` === selectedDocument);
                 if (document) {
-                    const uploadResponse = await requestUploadFinancialReport(document.doc_id);
+                    const uploadResponse = await requestUploadFinancialReport(document.doc_id, idToken);
                     const gcsUri = uploadResponse.gcs_uri;
                     setAnalysisResult(`GCS URI: ${gcsUri}`);
-                    const analysisResponse = await requestAnalyzeFinancialDocument(gcsUri);
+                    const analysisResponse = await requestAnalyzeFinancialDocument(gcsUri, idToken);
                     setAnalysisResult(analysisResponse.text);
 
-                    const downloadResponse = await requestDownloadFinancialDocument(gcsUri);
+                    const downloadResponse = await requestDownloadFinancialDocument(gcsUri, idToken);
                     const filename = gcsUri.split('/').pop() || 'report.pdf';
                     setDownloadFileState({ filename, file_data: downloadResponse });
                     setDownloadFile({ filename, file_data: downloadResponse });
