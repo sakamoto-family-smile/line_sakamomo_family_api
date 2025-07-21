@@ -92,7 +92,7 @@ def get_documents_info_dataframe(target_date: datetime) -> pd.DataFrame:
     return df
 
 
-def download_document(output_folder: str, doc_id: str):
+def download_document(output_folder: str, doc_id: str, filer_name: str):
     url = f'https://api.edinet-fsa.go.jp/api/v2/documents/{doc_id}'
     params = {
         "type": 2,
@@ -101,7 +101,7 @@ def download_document(output_folder: str, doc_id: str):
 
     try:
         res = requests.get(url, params=params, verify=False)
-        output_path = os.path.join(output_folder, f'{doc_id}.pdf')
+        output_path = os.path.join(output_folder, f'{doc_id}_{filer_name}.pdf')
         if res.status_code != 200:
             raise Exception(f"status code is {res.status_code}")
 
@@ -116,7 +116,7 @@ def download_document(output_folder: str, doc_id: str):
 
 def download_documents(output_folder: str, target_date: datetime) -> DownloadDocumentsResult:
     df = get_documents_info_dataframe(target_date=target_date)
-    df.to_csv(os.path.join(output_folder, "documents.csv"))
+    df.to_csv(os.path.join(output_folder, f"documents_{target_date.strftime('%Y%m%d')}.csv"))
 
     # doc_idから有価証券報告書をzip形式でダウンロードする
     res = DownloadDocumentsResult()
@@ -124,7 +124,11 @@ def download_documents(output_folder: str, target_date: datetime) -> DownloadDoc
         print(doc['edinetCode'], doc['docID'], doc['filerName'], doc['docDescription'], doc['submitDateTime'], sep='\t')
         doc_id = doc['docID']
         try:
-            download_document(output_folder=output_folder, doc_id=doc_id)
+            download_document(
+                output_folder=output_folder,
+                doc_id=doc_id,
+                filer_name=doc['filerName']
+            )
             res.append_success_doc_id(doc_id=doc_id)
         except Exception as e:
             print(e)
