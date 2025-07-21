@@ -3,7 +3,7 @@ docker-build:
 	docker build -t frontend2 .
 
 docker-run: docker-build
-	docker run -p 3000:3000 \
+	docker run -p 8080:8080 \
 		-e REACT_APP_FIREBASE_API_KEY=$(REACT_APP_FIREBASE_API_KEY) \
 		-e REACT_APP_FIREBASE_AUTH_DOMAIN=$(REACT_APP_FIREBASE_AUTH_DOMAIN) \
 		-e REACT_APP_FIREBASE_PROJECT_ID=$(REACT_APP_FIREBASE_PROJECT_ID) \

@@ -16,7 +16,7 @@ const handleApiError = (error: any) => {
 
 export const requestFinancialDocumentList = async (companyName: string, idToken: string) => {
     try {
-        const response = await axios.get(`${backendConfig.api_base_url}/financial_documents/?company_name=${companyName}`, {
+        const response = await axios.post(`${backendConfig.api_base_url}/financial_document_list/`, { company_name: companyName}, {
             headers: {
                 Authorization: `Bearer ${idToken}`,
             },
