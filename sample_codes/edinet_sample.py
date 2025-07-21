@@ -2,6 +2,7 @@ import requests
 import pandas as pd
 from datetime import datetime, timedelta
 from copy import deepcopy
+import urllib.error
 import urllib.request
 import sys
 import os
@@ -131,6 +132,31 @@ def download_documents(output_folder: str, target_date: datetime) -> DownloadDoc
     return res
 
 
+def download_documents_for_duration(
+    output_folder: str,
+    target_date: datetime,
+    duration_days: int
+) -> DownloadDocumentsResult:
+    total_result = DownloadDocumentsResult()
+    for day in range(duration_days):
+        t = target_date - timedelta(days=day)
+        date_str = t.strftime('%Y-%m-%d')
+        print(f"Downloading documents for {date_str}")
+        try:
+            daily_result = download_documents(
+                output_folder=output_folder,
+                target_date=t
+            )
+            # Merge results
+            for doc_id in daily_result.get_success_doc_ids():
+                total_result.append_success_doc_id(doc_id)
+            for doc_id in daily_result.get_error_doc_ids():
+                total_result.append_error_doc_id(doc_id)
+        except Exception as e:
+            print(f"Failed to download documents for {date_str}: {e}")
+    return total_result
+
+
 def get_documents_list(duration_days: int, target_date: datetime) -> GetDocumentListResult:
     dfs = []
     res = GetDocumentListResult()
@@ -162,22 +188,41 @@ if __name__ == "__main__":
 
     parser = ArgumentParser()
     parser.add_argument("mode")
-    parser.add_argument("--target_date", type=str, help="ドキュメント一覧を取得する際の日付情報. YYYY-MM-DDの文字列で記載")
-    parser.add_argument("--duration_days", type=int, help="ドキュメント一覧情報を取得する際の期間を指定。最新日付から逆算した期間を日単位で指定")
+    parser.add_argument(
+        "--target_date",
+        type=str,
+        help="ドキュメント一覧を取得する際の日付情報. YYYY-MM-DDの文字列で記載"
+    )
+    parser.add_argument(
+        "--duration_days",
+        type=int,
+        help="ドキュメント一覧情報を取得する際の期間を指定。"
+             "最新日付から逆算した期間を日単位で指定"
+    )
     args = parser.parse_args()
     target_date_str = args.target_date
     target_date = datetime.strptime(target_date_str, "%Y-%m-%d")
-    output_folder = os.path.join(os.path.dirname(__file__), "output", datetime.now().strftime("%Y%m%d%H%M%S"))
+    output_folder = os.path.join(
+        os.path.dirname(__file__),
+        "output",
+        datetime.now().strftime("%Y%m%d%H%M%S")
+    )
     os.makedirs(output_folder, exist_ok=True)
 
     mode = int(args.mode)
     if mode == Mode.DOWNLOAD_DOCUMENTS.value:
-        # EDINETから指定した日付の有価証券報告書のリストを取得する
-        res = download_documents(output_folder=output_folder, target_date=target_date)
+        # EDINETから指定した期間の有価証券報告書をダウンロードする
+        duration_days = int(args.duration_days) if args.duration_days else 1
+        res = download_documents_for_duration(
+            output_folder=output_folder,
+            target_date=target_date,
+            duration_days=duration_days
+        )
 
         # 取得結果を表示する
         print("--- document download results ---")
         print(f"target date = {target_date_str}")
+        print(f"duration days = {duration_days}")
         print(f"success count = {res.get_success_counts()}")
         print(f"error count = {res.get_error_counts()}")
 
